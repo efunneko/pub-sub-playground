@@ -1,0 +1,29 @@
+{
+  "name": "jayesstee-starter",
+  "version": "1.0.0",
+  "description": "Starting point for a simple jayesstee app",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/efunneko/jayesstee-starter.git"
+  },
+  "author": "Edward Funnekotter <efunneko@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/efunneko/jayesstee-starter/issues"
+  },
+  "homepage": "https://github.com/efunneko/jayesstee-starter#readme",
+  "devDependencies": {
+    "html-webpack-plugin": "^5.5.0",
+    "webpack": "^5.66.0",
+    "webpack-cli": "^4.9.1",
+    "webpack-dev-server": "^4.7.3"
+  },
+  "dependencies": {
+    "jayesstee": "^0.13.0",
+    "navigo": "^8.11.1"
+  }
+}
