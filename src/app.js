@@ -7,7 +7,7 @@ export class App extends jst.Component {
   constructor(specs) {
     super();
     
-    this.title              = "Jayesstee Starter";
+    this.title              = "Solly Goldberg";
     this.alerts             = [];
           
     this.width              = window.innerWidth;
