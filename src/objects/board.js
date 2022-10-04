@@ -3,13 +3,14 @@
 import * as THREE     from 'three' 
 import {StaticObject}         from './static-object.js'
 import {Block}                from './block.js'
+import {Assets}               from '../assets.js'
 
 
-const backgroundTextureUrl = "images/textures/..."
-const edgeWidth            = 0.5
-const edgeDepth            = 1
+const edgeWidth            = 0.4
+const edgeDepth            = 2
 
 export class Board extends StaticObject {
+
   constructor(app, opts) {
     super(app, opts)
 
@@ -22,25 +23,23 @@ export class Board extends StaticObject {
     // The board never rotates
     this.rotation = 0;
 
+
     this.create()
 
   }
 
   create() {
 
-    const loader = new THREE.TextureLoader();
-
-    this.woodTexture = {};
-    
-    this.woodTexture.albedo = loader.load("images/textures/TexturesCom_Wood_Rough_1K_albedo.png");
-    this.woodTexture.normal = loader.load("images/textures/TexturesCom_Wood_Rough_1K_normal.png");
-    this.woodTexture.rough  = loader.load("images/textures/TexturesCom_Wood_Rough_1K_roughness.png");
+    const ea = this.app.scale(edgeWidth) / 2
 
     this.createBack();
-    this.createEdge(this.x1, this.y1, this.x2, this.y1);
-    this.createEdge(this.x1, this.y1, this.x1, this.y2);
-    this.createEdge(this.x1, this.y2, this.x2, this.y2);
-    this.createEdge(this.x2, this.y1, this.x2, this.y2);
+    this.createEdge(this.x1-ea, this.y1, this.x2+ea, this.y1);
+    this.createEdge(this.x1, this.y1+ea, this.x1, this.y2-ea);
+    this.createEdge(this.x1-ea, this.y2, this.x2+ea, this.y2);
+    this.createEdge(this.x2, this.y1+ea, this.x2, this.y2-ea);
+    //this.createEdge(this.x1+3*ea, this.y1+45*ea, this.x2-10*ea, this.y1+35*ea);
+    //this.createEdge(this.x1+10*ea, this.y1+20*ea, this.x2-3*ea, this.y1+25*ea);
+
   }
 
   createBack() {
@@ -50,12 +49,11 @@ export class Board extends StaticObject {
     const height   = this.y2 - this.y1;
     const depth    = 1;
     const geometry = new THREE.BoxGeometry(width, height, depth);
-    //const geometry = new THREE.TorusGeometry(4, 0.5, 8, 26, 3.14);
     const material = new THREE.MeshStandardMaterial({
-      map:          this.woodTexture.albedo,
-      normalMap:    this.woodTexture.normal,
+      map:          Assets.textures.woodTexture.albedo,
+      normalMap:    Assets.textures.woodTexture.normal,
       normalScale:  new THREE.Vector2( 1, - 1 ), 
-      roughnessMap: this.woodTexture.rough,
+      roughnessMap: Assets.textures.woodTexture.rough,
       metalness:    0,
       roughness:    1,
     });
@@ -76,47 +74,55 @@ export class Board extends StaticObject {
 
   createEdge(x1, y1, x2, y2) {
 
-    // Create a box for the edge
-    let width;
-    let height;
-    const depth    = edgeDepth;
+    // Create a box for the edge that goes from x1, y1 to x2, y2 with a width of edgeWidth
+    const depth    = this.app.scale(edgeDepth)
+    const width    = this.app.scale(edgeWidth)
 
-    if (x1 == x2) {
-      width  = edgeWidth;
-      height = Math.abs(y2 - y1) - edgeWidth;
-    } else {
-      width  = Math.abs(x2 - x1) + edgeWidth;
-      height = edgeWidth;
-    }
+    // Find the distance between the two points
+    const dx     = x2 - x1;
+    const dy     = y2 - y1;
+    const length = Math.sqrt(dx * dx + dy * dy);
 
-    const geometry = new THREE.BoxGeometry(width, height, depth);
+    // Find the angle between the two points
+    const angle = Math.atan2(dy, dx);
 
+    // Create the geometry
+    const geometry = new THREE.BoxGeometry(length, width, depth);
+
+    // Create the material
     const material = new THREE.MeshStandardMaterial({
-      map:          this.woodTexture.albedo,
-      normalMap:    this.woodTexture.normal,
+      map:          Assets.textures.woodTexture.albedo,
+      normalMap:    Assets.textures.woodTexture.normal,
       normalScale:  new THREE.Vector2( 1, - 1 ),
-      roughnessMap: this.woodTexture.rough,
+      roughnessMap: Assets.textures.woodTexture.rough,
       metalness:    0,
       roughness:    1,
     });
 
-    // Tile the texture
-    material.map.wrapS = THREE.RepeatWrapping;
-    material.map.wrapT = THREE.RepeatWrapping;
-    
-
-    const edge     = new THREE.Mesh(geometry, material);
+    // Create the mesh
+    const edge = new THREE.Mesh(geometry, material);
 
     // Position it so that the top left corner is at x1, y1
-    edge.position.x = (x1 + x2) / 2;
-    edge.position.y = (y1 + y2) / 2;
-    edge.position.z = edgeDepth / 2;
+    edge.position.x = x1 + dx / 2;
+    edge.position.y = y1 + dy / 2;
+    edge.position.z = depth / 2;
 
-    // Receive shadows if turned on
+    // Rotate it to the correct angle
+    edge.rotation.z = angle;
+
+    // Cast and Receive shadows if turned on
     edge.receiveShadow = this.useShadows;
     edge.castShadow    = this.useShadows;
 
+    // Add it to the scene
     this.scene.add(edge);
+
+    // And add the edge to the physics world
+    const cx = (x1 + x2) / 2;
+    const cy = (y1 + y2) / 2;
+    console.log("Creating edge at " + cx + ", " + cy + " with length " + length + " and angle " + angle);
+    console.log("phys engine is " + this.app.getPhysicsEngine());
+    this.app.getPhysicsEngine().createBox(this, cx, -cy, length, width,{isStatic: true, angle: -angle, friction: 0.9, restitution: 0.2});
 
   }
 

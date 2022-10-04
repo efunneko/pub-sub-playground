@@ -28,6 +28,8 @@ export class BaseObject {
 
   }
 
-
+  static loadAssets() {
+    return Promise.resolve();
+  }
 
 }

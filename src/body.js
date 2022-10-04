@@ -1,5 +1,4 @@
 import {jst}        from "jayesstee";
-import {World}      from "./world.js"
 
 //
 // Body - Handles all that is the body
@@ -11,9 +10,6 @@ export class Body extends jst.Component {
     this.width         = width;
     this.height        = height;
     this.setPage("home");
-
-    // Create the 3d world
-    this.world = new World(this.app, {})
 
   }
 
@@ -88,7 +84,6 @@ export class Home extends jst.Component {
         events: {
         },
       },
-      "Hello, World!"
       );
   }
 

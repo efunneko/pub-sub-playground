@@ -10,4 +10,11 @@ export class StaticObject extends BaseObject {
     this.y       = opts.y || 0
 
   }
+
+  // Called from the physics engine to update the position of the object but since this is a static object
+  // we don't need to do anything
+  update() {
+  }
+
+  
 }
