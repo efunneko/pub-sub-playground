@@ -40,14 +40,14 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
 
     //console.warn("doPhysics", time) 
     let delta = (time - this.lastTime) || 16;
-    if (delta > 200) {
-      delta = 16;
+    if (delta > 50) {
+      delta = 50;
     }
 
     try {      
 
-      const velocityIterations = 1;
-      const positionIterations = 1;
+      const velocityIterations = 4;
+      const positionIterations = 4;
       let step = delta / 1000;
       //step = 1/60;
       //console.log("step", time, delta, step)
@@ -160,6 +160,10 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
       opts.density = 0.001;
     }
     return opts;
+  }
+
+  setPosition(body, x, y) {
+    body.setPosition(planck.Vec2(this.scale(x), this.scale(-y)));
   }
 
   scale(val) {

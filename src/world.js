@@ -4,6 +4,7 @@ import * as THREE           from 'three'
 import {RGBELoader}         from 'three/examples/jsm/loaders/RGBELoader.js';
 import {Board}              from './objects/board.js'
 import {Ball}               from './objects/ball.js'
+import {Block}              from './objects/block.js'
 import {Portal}             from './objects/portal.js'
 import {Barrier}            from './objects/barrier.js'
 import {PhysicsWorld}       from './physics/physics-world.js'
@@ -47,7 +48,8 @@ export class World {
     this.camera            = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 0.1, 2000 )
     this.camera.position.z = 1300
 
-    this.renderer = new THREE.WebGLRenderer()
+    this.renderer = new THREE.WebGLRenderer({antialias: false})
+    this.renderer.setPixelRatio( window.devicePixelRatio * 0.8 )
     this.renderer.setSize( window.innerWidth, window.innerHeight )
 
     document.body.appendChild(this.renderer.domElement)
@@ -87,14 +89,17 @@ export class World {
 
     // Temp create a ball
     let ball = new Ball(this.app, {scene: this.scene, x: -300, y: 250, radius: 20, useShadows: useShadows});
-    new Ball(this.app, {scene: this.scene, x: -400, y: 180, radius: 21, useShadows: useShadows});
-    new Ball(this.app, {scene: this.scene, x: -350, y: 180, radius: 29, useShadows: useShadows});
+    new Ball(this.app, {scene: this.scene, x: -200, y: 180, radius: 21, useShadows: useShadows});
+    new Block(this.app, {scene: this.scene, x: 50, y: 230, rotation: 0, angle: 0, useShadows: useShadows});
+    new Block(this.app, {scene: this.scene, x: 0, y: 230, rotation: 0, angle: 0, useShadows: useShadows});
+    new Block(this.app, {scene: this.scene, x: -50, y: 230, rotation: 0, angle: 0, useShadows: useShadows});
+    new Block(this.app, {scene: this.scene, x: -100, y: 230, rotation: 0, angle: 0, useShadows: useShadows});
     //new Ball(this.app, {scene: this.scene, x: -200, y: 200, radius: 0.5, useShadows: useShadows});
     new Barrier(this.app, {
       scene: this.scene, 
       points: [
         new THREE.Vector2(-400, 200),
-        new THREE.Vector2(100, 100),
+        new THREE.Vector2(100, 180),
         new THREE.Vector2(400, 75),
       ], 
       useShadows: useShadows

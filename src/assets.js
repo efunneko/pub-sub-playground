@@ -19,7 +19,8 @@ export class Assets {
 
     // Load all textures
     Assets.textures = {
-      woodTexture: {}
+      woodTexture: {},
+      stainlessSteelTexture: {},
     };
 
     return Promise.all([
@@ -31,7 +32,13 @@ export class Assets {
       }),
       loader.loadAsync("images/textures/TexturesCom_Wood_Rough_1K_roughness.png").then((texture) => {
         Assets.textures.woodTexture.rough = texture;
-      })
+      }),
+      loader.loadAsync("images/textures/used-stainless-steel2_small_albedo.png").then((texture) => {
+        Assets.textures.stainlessSteelTexture.albedo = texture;
+      }),
+      loader.loadAsync("images/textures/used-stainless-steel2_small_roughness.png").then((texture) => {
+        Assets.textures.stainlessSteelTexture.rough = texture;
+      }),
     ])
   }
 
