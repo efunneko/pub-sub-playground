@@ -31,7 +31,6 @@ export class Block extends DynamicObject {
 
     // Create the material
     const material = new THREE.MeshStandardMaterial({
-      //map:               Assets.textures.stainlessSteelTexture.albedo,
       roughnessMap:      Assets.textures.stainlessSteelTexture.rough,
       // ivory color
       color:             0xf0e6d6,
@@ -40,29 +39,41 @@ export class Block extends DynamicObject {
     });
 
     // Create the mesh
-    const mesh = new THREE.Mesh(geometry, material);
+    this.mesh = new THREE.Mesh(geometry, material);
 
     // Move the ball away from the back a bit
-    mesh.position.z = defaultZPosition;
+    this.mesh.position.z = defaultZPosition;
 
     // If useShadows is true, then cast and receive shadows
-    mesh.castShadow    = this.useShadows;
-    mesh.receiveShadow = this.useShadows;
+    this.mesh.castShadow    = this.useShadows;
+    this.mesh.receiveShadow = this.useShadows;
 
     // Add the mesh to the dynamic group
-    this.group.add(mesh);
+    this.group.add(this.mesh);
 
     // Do the same for the physics engine
     this.createPhysicsBody();
 
     // Register with the selection manager
-    this.uis.registerObject(mesh, {
+    this.uis.registerObject(this.mesh, {
       moveable: true,
+      selectable: true,
+      //selectedMaterial: new THREE.MeshStandardMaterial({color: 0x00ff00}),
       onMove: (obj, pos, info) => this.onMove(obj, pos, info),
       onDown: (obj, pos, info) => this.onDown(obj, pos, info),
       onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
+      onSelected: (obj) => obj.material = new THREE.MeshStandardMaterial({color: 0xf0e686, emissive: 0x333308}),
+      onUnselected: (obj) => obj.material = new THREE.MeshStandardMaterial({color: 0xf0e6d6, emissive: 0x000000}),
+      onDelete: (obj) => this.destroy()
     });
 
+  }
+
+  destroy() {
+    console.log("Destroying block");
+    this.app.getPhysicsEngine().removeBody(this.body);
+    this.group.remove(this.mesh);
+    this.uis.unregisterObject(this.mesh);
   }
 
   createPhysicsBody() {
@@ -95,7 +106,9 @@ export class Block extends DynamicObject {
 
   onMove(obj, pos, info) {
     // Change the position of the physics body
-    this.app.getPhysicsEngine().setPosition(this.body, pos.x, -pos.y);
+    this.group.position.x += info.deltaPos.x;
+    this.group.position.y += info.deltaPos.y;
+    this.app.getPhysicsEngine().setPosition(this.body, this.group.position.x, -this.group.position.y);
   }
 
   onDown(obj, pos, info) {

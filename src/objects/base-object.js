@@ -28,6 +28,10 @@ export class BaseObject {
 
   }
 
+  destroy() {
+    this.scene.remove(this.group);
+  }
+
   static loadAssets() {
     return Promise.resolve();
   }

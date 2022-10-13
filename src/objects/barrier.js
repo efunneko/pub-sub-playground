@@ -11,25 +11,25 @@ export class Barrier extends StaticObject {
   constructor(app, opts) {
     super(app, opts)
 
-    // Barriers are made up of a list of 2d points
-    // We will render them as an extruded shape
-    // We will put a screw head model at each point
-    this.points = opts.points || []
-
     // The snap grid size
     this.snapSize = opts.snapSize || 10;
 
-    // Information about an object being dragged
-    this.dragInfo = {
-      obj: null,
-      start: null,
-      selectedInfo: null,
-      isDragging: false,
-    };
+    // Barriers are made up of a list of 2d points
+    this.points = opts.points || []
+
+    // Snap all points to the grid
+    this.points = this.points.map(p => this.snapToGridVec2(p));
 
     // Get the UI Selection Manager
     this.uis = this.app.ui.getUiSelection();
 
+    // Set to false until we are destroyed
+    this.destroyed = false;
+
+    // Set to true if a new barrier is being created during a drag
+    this.creatingBarrier = false;
+
+    // Now create the barrier
     this.create()
 
   }
@@ -41,6 +41,17 @@ export class Barrier extends StaticObject {
 
   }
 
+  destroy() {
+    
+
+    // Destroy the barrier
+    this.destroyBarrier();
+
+    // Set the destroyed flag
+    this.destroyed = true;
+
+  }
+
   // Create a shape from the points
   createBarrier() {
 
@@ -48,19 +59,29 @@ export class Barrier extends StaticObject {
     const material = new THREE.MeshStandardMaterial({
       map:          Assets.textures.woodTexture.albedo,
       normalMap:    Assets.textures.woodTexture.normal,
-      normalScale:  new THREE.Vector2( 1, - 1 ), 
       roughnessMap: Assets.textures.woodTexture.rough,
+      normalScale:  new THREE.Vector2( 1, - 1 ), 
       metalness:    0,
       roughness:    1,
     });
+
+    // If barrier is selected, then add an emissive color
+    if (this.barrierSelected) {
+      material.emissive = new THREE.Color(0x333308);
+    }
 
     // Selection properties for all objects in the barrier
     const uisInfo = {
       moveable:          true,
       rotatable:         false,
-      selectable:        false,
+      selectable:        true,
       onDown:            (obj, pos, info) => this.onDownBarrier(obj, pos, info),
       onMove:            (obj, pos, info) => this.onMoveBarrier(obj, pos, info),
+      onSelected:        (obj) => this.onSelectedBarrier(obj),
+      onUnselected:      (obj) => this.onUnselectedBarrier(obj),
+      onDelete:          (obj) => this.onDeleteBarrier(obj),
+      hoverCursor:       "grab",
+      moveCursor:        "grabbing",
     };
   
     // For each pair of points, draw a box between them
@@ -179,7 +200,7 @@ export class Barrier extends StaticObject {
       moveable:          true,
       rotatable:         false,
       selectable:        true,
-      selectedMaterial:  new THREE.MeshPhongMaterial({color: 0x66ff66, specular: 0x111111, shininess: 200}),
+      selectedMaterial:  new THREE.MeshPhongMaterial({color: 0xbbbb55, specular: 0x111111, shininess: 200}),
       onDown:            (obj, pos, info) => this.onDownScrewHead(screwHead, pos, info),
       onMove:            (obj, pos, info) => this.onMoveScrewHead(screwHead, pos, info),
       onDelete:          (obj) => this.onDeleteScrewHead(screwHead),
@@ -193,6 +214,25 @@ export class Barrier extends StaticObject {
 
   }
 
+  onSelectedBarrier(obj) {
+    // Change the materials of all the barrier pieces
+    this.barrierSelected = true;
+    this.recreateBarrier();
+  }
+
+  onUnselectedBarrier(obj) {
+    // Change the materials of all the barrier pieces
+    this.barrierSelected = false;
+    if (!this.destroyed) {
+      this.recreateBarrier();
+    }
+  }
+
+  onDeleteBarrier(obj) {
+    // TODO - notify higher-level that the barrier has been deleted
+    this.destroyed = true;
+    this.destroyBarrier();
+  }
 
   onDownScrewHead(screwHead, pos, info) {
   }
@@ -209,31 +249,42 @@ export class Barrier extends StaticObject {
     // Update the points for the new position of the screw head and redraw the barrier
     this.points[screwHead.parent.userData.index].x = x;
     this.points[screwHead.parent.userData.index].y = y;
-    this.destroyBarrier();
-    this.createBarrier();
+    this.recreateBarrier();
   }
 
   onDeleteScrewHead(screwHead) {
     // Remove the point from the array
     this.points.splice(screwHead.parent.userData.index, 1);
-    this.destroyBarrier();
-    this.createBarrier();
+    this.recreateBarrier();
   }
 
   onDownBarrier(obj, pos, info) {
     // Save all the current point locations
-    this.startPoints = this.points.map(p => p.clone());
+    this.startPoints       = this.points.map(p => p.clone());
+    this.creatingDuplicate = false;
   }
 
   onMoveBarrier(obj, pos, info) {
 
+    // If the CTRL key is down and we haven't already duplicated the barrier, then duplicate it
+    if (info.ctrlKey && !this.creatingDuplicate) {
+      this.creatingDuplicate = true;
+      this.duplicate = this.app.world.addObject("barrier", {points: this.startPoints.map(p => p.clone())});
+    }
+
+    // If we are creating a duplicate, but the CTRL key is no longer down, then stop creating the duplicate
+    if (!info.ctrlKey && this.creatingDuplicate) {
+      this.creatingDuplicate = false;
+      this.app.world.removeObject(this.duplicate);
+      this.duplicate = null;
+    }
+
     // Update the points for the new position of the barrier and redraw the barrier
     this.points.forEach((point, i) => {
-      point.x = this.startPoints[i].x + (pos.x - info.posAtMouseDown.x);
-      point.y = this.startPoints[i].y + (pos.y - info.posAtMouseDown.y);
+      point.x = this.startPoints[i].x + this.snapToGridSingle(pos.x - info.posAtMouseDown.x);
+      point.y = this.startPoints[i].y + this.snapToGridSingle(pos.y - info.posAtMouseDown.y);
     });
-    this.destroyBarrier();
-    this.createBarrier();
+    this.recreateBarrier();
 
   }    
 
@@ -254,13 +305,27 @@ export class Barrier extends StaticObject {
 
     // Need to mark the new screw head as selected
     this.uis.selectObject(obj);
-
-    this.destroyBarrier();
-    this.createBarrier();
+    this.recreateBarrier();
   }
 
   snapToGrid(x, y) {
     return [Math.round(x / this.snapSize) * this.snapSize, Math.round(y / this.snapSize) * this.snapSize];
   }
+
+  snapToGridSingle(val) {
+    return Math.round(val / this.snapSize) * this.snapSize;
+  }
+
+  snapToGridVec2(v) {
+    return new THREE.Vector2(Math.round(v.x / this.snapSize) * this.snapSize, Math.round(v.y / this.snapSize) * this.snapSize);
+  }
+
+  recreateBarrier() { 
+      // Destroy the current barrier
+      this.destroyBarrier();
+  
+      // Create the new barrier
+      this.createBarrier();
+    }
  
 }

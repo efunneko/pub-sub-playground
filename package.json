@@ -26,8 +26,10 @@
   "dependencies": {
     "jayesstee": "^0.13.0",
     "matter-js": "^0.18.0",
+    "mqtt": "^4.3.7",
     "navigo": "^8.11.1",
     "planck-js": "^0.3.31",
+    "solclientjs": "^10.11.0",
     "three": "^0.144.0"
   }
 }

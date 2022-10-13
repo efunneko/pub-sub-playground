@@ -65,7 +65,10 @@ export class Ball extends DynamicObject {
 
   onMove(obj, pos, info) {
     // Change the position of the physics body
-    this.app.getPhysicsEngine().setPosition(this.body, pos.x, -pos.y);
+    this.group.position.x += info.deltaPos.x;
+    this.group.position.y += info.deltaPos.y;
+
+    this.app.getPhysicsEngine().setPosition(this.body, this.group.position.x, -this.group.position.y);
   }
 
   onDown(obj, pos, info) {

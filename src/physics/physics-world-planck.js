@@ -36,6 +36,22 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
   start() {
   }
 
+  pause() {
+    // Loop over all bodies and put them to sleep
+    let bodyList = this.world.getBodyList();
+    for (let body = bodyList; body; body = body.getNext()) {
+      body.setAwake(false);
+    }
+  }
+
+  play() {
+    // Loop over all bodies and wake them up
+    let bodyList = this.world.getBodyList();
+    for (let body = bodyList; body; body = body.getNext()) {
+      body.setAwake(true);
+    }
+  }
+
   doPhysics(time) {
 
     //console.warn("doPhysics", time) 

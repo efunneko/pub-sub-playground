@@ -23,6 +23,7 @@ export class World {
     this.el        = opts.el
     this.ui        = opts.ui
     this.doPhysics = false
+    this.objects   = []
 
     this.create()
   }
@@ -130,36 +131,46 @@ export class World {
 
   }
 
-  loadRGBEnvMap() {
-    //let env = "studio_small_08_2k.hdr";
-    let env = "studio_country_hall_2k.hdr";
+  addObject(type, opts) {
+    const typeToClass = {
+      ball: Ball,
+      block: Block,
+      barrier: Barrier,
+      portal: Portal,
+    }
 
-    return new Promise((resolve, reject) => {  
-      new RGBELoader()
-      .setPath( 'images/textures/' )
-      .load(env, (texture) => {
+    opts.scene = this.scene;
+    opts.useShadows = useShadows;
 
-        texture.mapping = THREE.EquirectangularReflectionMapping;
-        texture.flipY = true;
+    let obj = new typeToClass[type](this.app, opts);
 
-        this.scene.background = new THREE.Color(0xccccaa);
-        this.renderer.setClearColor(0xccccaa, 1);
-        this.scene.environment = texture;
+    // Put it on our list of objects
+    this.objects.push(obj);
 
-        console.log("Loaded env map")
-        resolve();
-
-      });
-    });
-
+    return obj;
   }
 
+  removeObject(obj) {
+    // Remove it from our list of objects
+    obj.destroy();
+    this.objects = this.objects.filter(o => o !== obj);
+  }
+
+  play() {
+    this.paused = false;
+  }
+
+  pause() {
+    this.paused = true;
+  }
 
   animate() {
-    requestAnimationFrame((time) => {
+    this.animationFrameId = requestAnimationFrame((time) => {
       this.animate()
-      if (this.doPhysics) {
-        this.app.getPhysicsEngine().doPhysics(time)
+      if (1 || this.doPhysics) {
+        if (!this.paused) {
+          this.app.getPhysicsEngine().doPhysics(time)
+        }
       }
       else {
         this.lastTime = this.lastTime || time

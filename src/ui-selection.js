@@ -47,19 +47,20 @@ export class UISelection {
   // Register an object for selection
   registerObject(obj, opts) {
     let uisInfo = {
-      moveable:      opts.moveable,
-      rotatable:     opts.rotatable,
-      selectable:    opts.selectable,
-      onDown:        opts.onDown,
-      onDelete:      opts.onDelete,
-      onDragStart:   opts.onDragStart,
-      onRotateStart: opts.onRotateStart,
-      onRotate:      opts.onRotate,
-      onMove:        opts.onMove,
-      onUp:          opts.onUp,
-      onSelected:    opts.onSelected,
-      onUnselected:  opts.onUnselected,
+      moveable:         opts.moveable,
+      rotatable:        opts.rotatable,
+      selectable:       opts.selectable,
+      onDown:           opts.onDown,
+      onDelete:         opts.onDelete,
+      onDragStart:      opts.onDragStart,
+      onRotateStart:    opts.onRotateStart,
+      onRotate:         opts.onRotate,
+      onMove:           opts.onMove,
+      onUp:             opts.onUp,
+      onSelected:       opts.onSelected,
+      onUnselected:     opts.onUnselected,
       selectedMaterial: opts.selectedMaterial,
+      configForm:       opts.configForm,
     };
 
     this.setUisInfo(obj, uisInfo);
@@ -87,6 +88,10 @@ export class UISelection {
 
     // Get the object that was clicked on
     const intersect = this.getObjectIntersectFromEvent(e);
+    if (!intersect) {
+      return;
+    }
+
     const obj       = intersect.object;
 
     // If there is a persistent selection, then we want to unselect it unless it was clicked on
@@ -107,6 +112,7 @@ export class UISelection {
       // Get the x,y in 3d space for the z of the object
       this.state.posAtMouseDown = this.getMousePosGivenZ(e, intersect.point.z);
       this.state.rotAtMouseDown = obj.rotation.clone();
+      this.state.prevPos        = this.state.posAtMouseDown.clone();
 
       if (uisInfo.moveable) {
         this.state.isDragging = true;
@@ -114,6 +120,7 @@ export class UISelection {
 
       // Call the onDown callback if present
       if (uisInfo.onDown) {
+        this.state.ctrlKey  = e.ctrlKey;
         uisInfo.onDown(obj, this.state.posAtMouseDown, this.state);
       }
     }
@@ -132,6 +139,7 @@ export class UISelection {
       // Call the onUp callback if present
       if (uisInfo.onUp) {
         const pos = this.getMousePosGivenZ(e, this.state.posAtMouseDown.z);
+        this.state.ctrlKey = e.ctrlKey;
         uisInfo.onUp(obj, pos, this.state);
       }
 
@@ -177,7 +185,10 @@ export class UISelection {
 
       // Call the onMove callback if present
       if (uisInfo.onMove) {
+        this.state.deltaPos = pos.clone().sub(this.state.prevPos);
+        this.state.ctrlKey  = e.ctrlKey;
         uisInfo.onMove(obj, pos, this.state);
+        this.state.prevPos = pos;
       }
 
     }
@@ -225,6 +236,7 @@ export class UISelection {
 
       // Clear the persistent selection
       this.state.persistentSelected = false;
+      this.state.selectedObject     = null;
 
       // If there is an unselcted material, then set it
       if (uisInfo.unselectedMaterial) {
@@ -243,6 +255,7 @@ export class UISelection {
       if (uisInfo.onDelete) {
         uisInfo.onDelete(obj);
       }
+      this.unselectObject(obj);
     }
   }
 
