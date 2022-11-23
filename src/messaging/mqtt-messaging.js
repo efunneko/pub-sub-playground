@@ -2,7 +2,7 @@
 
 import {Messaging} from './messaging';
 
-var mqtt = require('mqtt')
+var mqtt = require('mqtt/dist/mqtt')
 
 export class MqttMessaging extends Messaging {
   constructor(opts) {
@@ -21,8 +21,8 @@ export class MqttMessaging extends Messaging {
       clean:    false
     }
 
-    console.log("Connecting to:", this.host, opts)
-    this.client  = mqtt.connect(this.host, opts)
+    console.log("Connecting to:", this.url, opts)
+    this.client  = mqtt.connect(this.url, opts)
  
     this.client.on('connect', () => {
       console.log("Connected!!", this.subscriptions)

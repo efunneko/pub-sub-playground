@@ -36,9 +36,10 @@ module.exports = {
     // 0.0.0.0 is available to all network devices
     // unlike default `localhost`.
     host: '0.0.0.0',
-    //disableHostCheck: true,
+    //disableHostCheck: true,    
     port: process.env.PORT, // Defaults to 8080
     open: false, // Open the page in browser
+    allowedHosts: ['all'] 
     //overlay: true,
   },
   devtool: 'inline-source-map',

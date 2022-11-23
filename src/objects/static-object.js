@@ -16,5 +16,10 @@ export class StaticObject extends BaseObject {
   update() {
   }
 
+  isStatic() {
+    return true
+  }
+  
+
   
 }

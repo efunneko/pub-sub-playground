@@ -4,6 +4,7 @@ import * as THREE             from 'three'
 import {StaticObject}         from './static-object.js'
 import {Assets}               from '../assets.js'
 import {UIInputTypes}         from '../ui-input-types.js'
+import {utils}                from '../utils.js'
 
 
 const backgroundTextureUrl = "images/textures/..."
@@ -12,6 +13,10 @@ const torusTubeRadius      = 0.15
 const backTubeLength       = 1
 const defaultColor         = 0x0000ff
 const defaultRotation      = 0
+const defaultRadius        = 0.5
+
+const openColor            = 0x000000
+const closedColor          = 0xffffff
 
 
 export class Portal extends StaticObject {
@@ -21,6 +26,17 @@ export class Portal extends StaticObject {
     this.radius   = opts.radius   || defaultRadius
     this.color    = opts.color    || defaultColor
     this.rotation = opts.rotation || defaultRotation
+    this.enabled  = typeof opts.enabled === "undefined" ? true : opts.enabled
+
+    this.configParams = this.initConfigParams([
+      {name: "name", type: "text", label: "Name"},
+      {name: "portalId", type: "text", label: "Portal ID"},
+      {name: "broker", type: "select", label: "Broker", options: () => this.app.getBrokers().map(b => { return {value: b.getName(), label: b.getName()}})},
+      {name: "enabled", type: "boolean", label: "Enabled"},
+      {name: "x", type: "hidden"},
+      {name: "y", type: "hidden"},
+      {name: "rotation", type: "hidden"},      
+    ])
 
     // Get the UI Selection Manager
     this.uis = this.app.ui.getUiSelection();
@@ -30,7 +46,11 @@ export class Portal extends StaticObject {
   }
 
   create() {
+    super.create()
+    this.createPortal()
+  }
 
+  createPortal() {
     const uisInfo = {
       moveable: true,
       selectable: true,
@@ -38,17 +58,14 @@ export class Portal extends StaticObject {
       onMove: (obj, pos, info) => this.onMove(obj, pos, info),
       onDown: (obj, pos, info) => this.onDown(obj, pos, info),
       onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
-      onSelected: (obj)   => {this.selected = true; this.destroy(); this.create();},
-      onUnselected: (obj) => {this.selected = false; this.destroy(); this.create();},
-      onDelete: (obj) => this.destroy(),
+      onSelected: (obj)   => {this.selected = true; this.reDraw();},
+      onUnselected: (obj) => {this.selected = false; this.reDraw()},
+      onDelete: (obj) => this.removeFromWorld(),
       configForm: {
         save: (form) => this.saveConfigForm(form),
-        fields: [
-          {name: "name", type: "text", label: "Name", value: this.name},
-          {name: "portalId", type: "text", label: "Portal ID", value: this.portalId},
-        ]
+        obj: this,
+        fields: this.configParams
       }
-
     }
 
 
@@ -58,6 +75,8 @@ export class Portal extends StaticObject {
     this.createTube(uisInfo);
     this.createBack(uisInfo);
     this.createScrewHeads();
+
+    this.setConnectEffects();
     
     this.group.position.set(this.x, this.y, 0);
     this.group.rotation.z = this.rotation;
@@ -65,10 +84,16 @@ export class Portal extends StaticObject {
   }
 
   destroy() {
+    this.destroyPortal();
+    super.destroy();
+  }
+
+  destroyPortal() {
     // Loop through the meshes and remove the physics bodies and the meshes from the group
     const children = [].concat(this.group.children);
     children.forEach(mesh => {
       if (mesh.userData.physicsBodies) {
+        console.log("Removing physics body", mesh.userData.physicsBodies);
         mesh.userData.physicsBodies.forEach(body => this.app.getPhysicsEngine().removeBody(body));
         mesh.userData.physicsBodies = [];
       }
@@ -77,6 +102,81 @@ export class Portal extends StaticObject {
       }
     });
     
+  }
+
+  reDraw() {
+    this.destroyPortal();
+    this.createPortal();
+  }
+
+  saveConfigForm(form) {
+    // Object.keys(form).forEach(key => {
+    //   this[key] = form[key];
+    // });
+    this.setValues(form)
+    this.reDraw();
+
+    if (this.brokerConnection && !this.enabled) {
+      this.disconnect();
+    }
+    else if (!this.brokerConnection && this.enabled) {
+      this.connect();
+    }
+
+    //this.saveableConfigChanged();
+    
+  }
+
+  // Connect to the configured Broker
+  connect() {
+    if (this.brokerConnection || !this.broker) {
+      return;
+    }
+
+    const broker = this.app.getBrokerByName(this.broker);
+    if (!broker) {
+      console.error("No broker found with name", this.broker);
+      return;
+    }
+
+    this.brokerConnection = broker.createConnection({
+      onConnect: connection => this.onConnect(connection),
+      onDisconnect: connection => this.onDisconnect(connection),
+      onMessage: (topic, message, payload) => this.onMessage(topic, message, payload)
+    });
+  }
+
+  // Disconnect from the configured Broker
+  disconnect() {
+    if (!this.brokerConnection) {
+      return;
+    }
+
+    this.brokerConnection.disconnect();
+    this.brokerConnection = null;
+  }
+
+  // Called when the connection to the broker is established
+  onConnect(connection) {
+    console.log("Connected to broker", connection);
+
+    // Change the mist color to indicate that we are connected
+    this.mist.material.color.setHex(0x00ff00);
+    this.pointLight.intensity = 3.3;
+  }
+
+  // Called when the connection to the broker is lost
+  onDisconnect(connection) {
+    console.log("Disconnected from broker", connection);
+  }
+
+  // Called when a message is received from the broker
+  onMessage(topic, message, payload) {
+    console.log("Message received", topic, message, payload);
+
+    // Need to create the object that is coming into the world
+    this.app.world.addObjectFromMessage(payload, topic);
+
   }
 
   onDown(obj, pos, info) {
@@ -91,8 +191,20 @@ export class Portal extends StaticObject {
     this.y += info.deltaPos.y;
 
     //this.group.position.set(pos.x, pos.y, 0);
-    this.destroy();
-    this.create();
+    this.reDraw();
+  }
+
+  setConnectEffects() {
+    if (this.brokerConnection) {
+      this.mist.material.color.setHex(openColor);
+      this.pointLight.intensity = 3.3;
+      this.torus.material.emmisiveIntensity = 2.0;
+    }
+    else {
+      this.mist.material.color.setHex(closedColor);
+      this.pointLight.intensity = 0.4;
+      this.torus.material.emmisiveIntensity = 0.0;
+    }
   }
 
   createTorus(uisInfo) {
@@ -110,7 +222,7 @@ export class Portal extends StaticObject {
       metalness: 0.5,
       roughness: 0.5,
       emissive: this.color,
-      emissiveIntensity: 1.5,
+      emissiveIntensity: 0.5,
       reflectivity: 0.5,
       transmission: 0.5,
       transparent: true,
@@ -139,8 +251,8 @@ export class Portal extends StaticObject {
     this.group.add(mesh);
 
     // Get coords for the phys bodies that are rotations around this.x, -this.y
-    const [x1, y1] = this.app.rotatePoint(this.x, -this.y, this.x, tr-this.y, this.adjustRotationForPhysics(this.rotation));
-    const [x2, y2] = this.app.rotatePoint(this.x, -this.y, this.x, -tr-this.y, this.adjustRotationForPhysics(this.rotation));
+    const [x1, y1] = utils.rotatePoint(this.x, -this.y, this.x, tr-this.y, this.adjustRotationForPhysics(this.rotation));
+    const [x2, y2] = utils.rotatePoint(this.x, -this.y, this.x, -tr-this.y, this.adjustRotationForPhysics(this.rotation));
 
     // Add the physics bodies
     mesh.userData.physicsBodies = [];
@@ -150,13 +262,15 @@ export class Portal extends StaticObject {
     // Register with the selection manager
     this.uis.registerObject(mesh, uisInfo);
 
+    this.torus = mesh;
+
   }
 
   createPointLight() {
     if (this.pointLight) {
       return;
     }
-    this.pointLight = new THREE.PointLight(this.color, 3.3, this.app.scale(4));
+    this.pointLight = new THREE.PointLight(this.color, 0.3, this.app.scale(4));
     this.pointLight.position.set(this.app.scale(0.5), 0, this.app.scale(torusRadius/2));
     this.pointLight.decay = 2
     this.group.add(this.pointLight);
@@ -167,7 +281,7 @@ export class Portal extends StaticObject {
     const tr = this.app.scale(torusRadius)
     const geometry = new THREE.CylinderGeometry(tr, tr, tr, 8, 1, false);
     const material = new THREE.MeshPhysicalMaterial( { 
-      color: 0x000000, 
+      color: closedColor,
       attenuationColor: 0xffffff,
       attenuationDistance: 0.1,
       transparent: true,
@@ -182,6 +296,8 @@ export class Portal extends StaticObject {
     mesh.castShadow    = this.useShadows;
 
     this.group.add( mesh ); 
+
+    this.mist = mesh;
 
     // Register with the selection manager
     this.uis.registerObject(mesh, uisInfo);
@@ -224,8 +340,8 @@ export class Portal extends StaticObject {
     this.group.add( mesh ); 
 
     // Get coords for the phys bodies that are rotations around this.x, -this.y
-    const [x1, y1] = this.app.rotatePoint(this.x, -this.y, this.x-btl/2, tr-this.y, this.adjustRotationForPhysics(this.rotation));
-    const [x2, y2] = this.app.rotatePoint(this.x, -this.y, this.x-btl/2, -tr-this.y, this.adjustRotationForPhysics(this.rotation));
+    const [x1, y1] = utils.rotatePoint(this.x, -this.y, this.x-btl/2, tr-this.y, this.adjustRotationForPhysics(this.rotation));
+    const [x2, y2] = utils.rotatePoint(this.x, -this.y, this.x-btl/2, -tr-this.y, this.adjustRotationForPhysics(this.rotation));
     
     // Add the physics body
     mesh.userData.physicsBodies = [];
@@ -267,7 +383,7 @@ export class Portal extends StaticObject {
     this.group.add( mesh ); 
 
     // Get coords for the phys bodies that are rotations around this.x, -this.y
-    const [x1, y1] = this.app.rotatePoint(this.x, -this.y, this.x-btl-0.25, -this.y, this.adjustRotationForPhysics(this.rotation));
+    const [x1, y1] = utils.rotatePoint(this.x, -this.y, this.x-btl-0.25, -this.y, this.adjustRotationForPhysics(this.rotation));
 
     // Add the physics body
     mesh.userData.physicsBodies = [];
@@ -356,7 +472,7 @@ export class Portal extends StaticObject {
     const angle = Math.atan2(this.rotationPoint.y - pos.y, this.rotationPoint.x - pos.x) + Math.PI/2 + this.rotationAdjustment
 
     // Adjust the group position to account for rotation around the other screw head
-    let [x, y] = this.app.rotatePoint(this.rotationPoint.x, this.rotationPoint.y, this.group.position.x, this.group.position.y, angle - this.rotation);
+    let [x, y] = utils.rotatePoint(this.rotationPoint.x, this.rotationPoint.y, this.group.position.x, this.group.position.y, angle - this.rotation);
 
     // Set the position of the group
     this.x = x
@@ -365,9 +481,8 @@ export class Portal extends StaticObject {
     // Set the rotation of the portal to the angle mod 2PI
     this.rotation = angle % (Math.PI*2)
 
-    // Recreate the portal
-    this.destroy()
-    this.create()
+    // Redraw the portal
+    this.reDraw()
 
     //console.log("onMoveScrewHead", screwHead, pos, info)
   }

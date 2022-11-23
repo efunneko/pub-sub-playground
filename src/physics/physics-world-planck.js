@@ -24,7 +24,7 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
   // Initialize the Planck physics engine
   init() {
     this.world = planck.World({
-      gravity: planck.Vec2(0, this.scale(-400))
+      gravity: planck.Vec2(0, this.scale(-500))
     });
 
     // Get collision events

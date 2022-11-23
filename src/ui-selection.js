@@ -21,8 +21,9 @@ import * as THREE from 'three'
 
 
 export class UISelection {
-  constructor(app, opts) {
+  constructor(app, ui, opts) {
     this.app                = app;
+    this.ui                 = ui;
     this.camera             = opts.camera;
     this.scene              = opts.scene;
     this.selectAllowedRange = opts.selectAllowedRange || 5;
@@ -115,7 +116,7 @@ export class UISelection {
       this.state.prevPos        = this.state.posAtMouseDown.clone();
 
       if (uisInfo.moveable) {
-        this.state.isDragging = true;
+        this.state.isDragging     = true;
       }
 
       // Call the onDown callback if present
@@ -154,7 +155,7 @@ export class UISelection {
 
     }
 
-    this.state.isDragging = false;
+    this.state.isDragging     = false;
 
   }
 
@@ -196,9 +197,9 @@ export class UISelection {
   }
 
   onKeyDown(e) {
-    if (e.key === "Delete" || e.key === "Backspace") {
-      this.deleteSelectedObject();
-    }
+    //if (e.key === "Delete" || e.key === "Backspace") {
+    //  this.deleteSelectedObject();
+    //}
   }
 
   // Select an object
@@ -220,12 +221,27 @@ export class UISelection {
         uisInfo.unselectedMaterial = obj.material;
         obj.material               = uisInfo.selectedMaterial;
       }
+
+      // If there is a config form, then show it
+      if (uisInfo.configForm) {
+        this.ui.showConfigForm(uisInfo.configForm);
+      }
+
+      if (uisInfo.deleteable) {
+        this.ui.showDeleteButton();
+      }
+
     }
   }
 
 
   // Unselect the object
   unselectObject(obj) {
+
+    if (!obj) {
+      obj = this.state.selectedObject;
+    }
+
     if (obj && obj.userData && obj.userData.uisInfo) {
       const uisInfo = obj.userData.uisInfo;
 
@@ -238,6 +254,9 @@ export class UISelection {
       this.state.persistentSelected = false;
       this.state.selectedObject     = null;
 
+      // If there is a config form, then hide it
+      this.ui.clearConfigForm();
+      
       // If there is an unselcted material, then set it
       if (uisInfo.unselectedMaterial) {
         obj.material = uisInfo.unselectedMaterial;
@@ -246,16 +265,28 @@ export class UISelection {
   }
 
   // Delete the selected object
-  deleteSelectedObject() {
+  deleteSelectedObject(force) {
+    console.log("deleteSelectedObject", this.state.selectedObject);
     const obj = this.state.selectedObject;
-    if (obj && obj.userData && obj.userData.uisInfo && this.state.persistentSelected) {
+    if (obj && obj.userData && obj.userData.uisInfo && (this.state.persistentSelected || force)) {
       const uisInfo = obj.userData.uisInfo;
+
+      this.unselectObject(obj);
 
       // Call the onDelete callback if present
       if (uisInfo.onDelete) {
+        console.log("deleting");
         uisInfo.onDelete(obj);
       }
-      this.unselectObject(obj);
+    }
+  }
+
+  // Called when the pointer up event happens within the delete/trash button
+  deletePointerUp(e) {
+    console.log("deletePointerUp", this.state);
+    // If we are dragging an object over the delete button, then delete it
+    if (this.state.isDragging) {
+      this.deleteSelectedObject(true);
     }
   }
 

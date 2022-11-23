@@ -7,15 +7,28 @@ import {Ball}               from './objects/ball.js'
 import {Block}              from './objects/block.js'
 import {Portal}             from './objects/portal.js'
 import {Barrier}            from './objects/barrier.js'
+import {Note}               from './objects/note.js'
+import {Broker}             from './objects/broker.js'
 import {PhysicsWorld}       from './physics/physics-world.js'
 import {PhysicsWorldMatter} from './physics/physics-world-matter.js';
 import {PhysicsWorldPlanck} from './physics/physics-world-planck.js';
 import {Assets}             from './assets.js';
 import {UI}                 from './ui.js';
+import {utils}              from './utils.js';
 
 
 const useShadows = true;
 const usePlanck  = true;
+
+const ObjectTypeToClass = {
+  'board':   Board,
+  'ball':    Ball,
+  'block':   Block,
+  'portal':  Portal,
+  'barrier': Barrier,
+  'note':    Note,
+  'broker':  Broker,
+};
 
 export class World {
   constructor(app, opts) {
@@ -23,7 +36,14 @@ export class World {
     this.el        = opts.el
     this.ui        = opts.ui
     this.doPhysics = false
-    this.objects   = []
+    this.objects   = []  
+
+    // Stores reference counts for objects by guid
+    this.objectsByGuid = {}    
+
+    // Maximum number of allowed copies of an object
+    // A copy can occur when an object is received from 2 or more portals
+    this.maxCopies = 2
 
     this.create()
   }
@@ -37,7 +57,6 @@ export class World {
     // The physics world
     if (usePlanck) {
       this.physics = new PhysicsWorldPlanck(this.app);
-      console.log("Using Planck physics engine", this.physicsWorld)
     } else {
       this.physics = new PhysicsWorldMatter(this.app);
     }
@@ -50,7 +69,7 @@ export class World {
     this.camera.position.z = 1300
 
     this.renderer = new THREE.WebGLRenderer({antialias: false})
-    this.renderer.setPixelRatio( window.devicePixelRatio * 0.8 )
+    //    this.renderer.setPixelRatio( window.devicePixelRatio * 0.8 )
     this.renderer.setSize( window.innerWidth, window.innerHeight )
 
     document.body.appendChild(this.renderer.domElement)
@@ -67,8 +86,14 @@ export class World {
       this.renderer.shadowMap.type              = THREE.PCFSoftShadowMap;
       this.renderer.shadowMap.renderSingleSided = true
       dirLight.castShadow                       = true;
-      dirLight.shadow.mapSize.width             = 1024
-      dirLight.shadow.mapSize.height            = 1024
+      if (0) {
+        dirLight.shadow.mapSize.width             = 1024
+        dirLight.shadow.mapSize.height            = 1024
+      }
+      else {
+        dirLight.shadow.mapSize.width             = 512
+        dirLight.shadow.mapSize.height            = 512
+      }
       dirLight.shadow.camera.near               = -5.5
       dirLight.shadow.camera.far                = 3000
       dirLight.shadow.blurSamples               = 8;
@@ -88,26 +113,26 @@ export class World {
     this.board = new Board(this.app, {scene: this.scene, x1: -500, y1: -300, x2: 500, y2: 300, useShadows: useShadows});
     this.animate()
 
+    /*
     // Temp create a ball
-    let ball = new Ball(this.app, {scene: this.scene, x: -300, y: 250, radius: 20, useShadows: useShadows});
-    new Ball(this.app, {scene: this.scene, x: -200, y: 180, radius: 21, useShadows: useShadows});
-    new Block(this.app, {scene: this.scene, x: 50, y: 230, rotation: 0, angle: 0, useShadows: useShadows});
-    new Block(this.app, {scene: this.scene, x: 0, y: 230, rotation: 0, angle: 0, useShadows: useShadows});
-    new Block(this.app, {scene: this.scene, x: -50, y: 230, rotation: 0, angle: 0, useShadows: useShadows});
-    new Block(this.app, {scene: this.scene, x: -100, y: 230, rotation: 0, angle: 0, useShadows: useShadows});
-    //new Ball(this.app, {scene: this.scene, x: -200, y: 200, radius: 0.5, useShadows: useShadows});
-    new Barrier(this.app, {
-      scene: this.scene, 
+    this.addObject("ball", {x: -300, y: 250, radius: 20});
+    this.addObject("ball", {x: -200, y: 180, radius: 21});
+    this.addObject("block",  {x: 50, y: 230, rotation: 0, angle: 0});
+    this.addObject("block",  {x: 0, y: 230, rotation: 0, angle: 0});
+    this.addObject("block",  {x: -50, y: 230, rotation: 0, angle: 0});
+    this.addObject("block",  {x: -100, y: 230, rotation: 0, angle: 0});
+    this.addObject("note",   {x: 0, y: 0, rotation: 0, angle: 0, text: "Hello World\nIt is great to see you!"});
+    this.addObject("broker", {x: 0, y: -300});
+
+    this.addObject("barrier", {
       points: [
         new THREE.Vector2(-400, 200),
         new THREE.Vector2(100, 180),
         new THREE.Vector2(400, 75),
       ], 
-      useShadows: useShadows
     });
 
-    new Barrier(this.app, {
-      scene: this.scene, 
+    this.addObject("barrier", {
       points: [
         new THREE.Vector2(480, 10),
         new THREE.Vector2(-200, -100),
@@ -115,13 +140,14 @@ export class World {
         new THREE.Vector2(480, -150),
         new THREE.Vector2(480, 10),
       ], 
-      useShadows: useShadows
     });
-    // Temp create a portal
-    let portal1 = new Portal(this.app, {scene: this.scene, x: -200, y: 0, radius: 0.5, useShadows: useShadows, color: 0x0000ff, rotation: 0});
-    let portal2 = new Portal(this.app, {scene: this.scene, x:  400, y: 0, radius: 0.5, useShadows: useShadows, color: 0xffab00, rotation: Math.PI});
-    let portal3 = new Portal(this.app, {scene: this.scene, x:  500, y: -400, radius: 0.5, useShadows: useShadows, color: 0x00ffff, rotation: Math.PI});
 
+    // Temp create a portal
+    this.addObject("portal", {x: -200, y: 0, radius: 0.5, color: 0x0000ff, rotation: 0});
+    this.addObject("portal", {x:  400, y: 0, radius: 0.5, color: 0xffab00, rotation: Math.PI});
+    this.addObject("portal", {x:  500, y: -400, radius: 0.5, color: 0x00ffff, rotation: Math.PI});
+
+    */
     // Set the camera and scene in the UI
     this.ui.setCamera(this.camera)
     this.ui.setScene(this.scene)
@@ -129,23 +155,48 @@ export class World {
     // Finally, add the pointer events
     this.ui.addPointerEvents(this.renderer.domElement);
 
+    this.app.loadConfig();
+
   }
 
-  addObject(type, opts) {
-    const typeToClass = {
-      ball: Ball,
-      block: Block,
-      barrier: Barrier,
-      portal: Portal,
+  addObject(type, opts, guid) {
+
+    if (!guid) {
+      guid = utils.guid();
     }
 
+    const cls = ObjectTypeToClass[type];
+
+    if (!cls) {
+      console.error("Unknown object type", type);
+      return;
+    }
+    
     opts.scene = this.scene;
     opts.useShadows = useShadows;
 
-    let obj = new typeToClass[type](this.app, opts);
+    let obj = new cls(this.app, opts);
+    obj.guid = guid;
 
     // Put it on our list of objects
-    this.objects.push(obj);
+    this.objects.push({type: type, object: obj});
+
+    return obj;
+  }
+
+  addObjectFromMessage(messagePayload, topic) {
+
+    const guid = messagePayload.guid;
+
+    // If we prevent duplicates, then check if we already have this object
+    if (this.objectsByGuid[guid] && this.objectsByGuid[guid] >= this.maxCopies) {
+      return;
+    }
+
+    let obj = this.addObject(messagePayload.type, messagePayload, guid);
+    obj.topic = topic;
+
+    this.objectsByGuid[guid] = this.objectsByGuid[guid] ? this.objectsByGuid[guid]++ : 1;
 
     return obj;
   }
@@ -153,7 +204,15 @@ export class World {
   removeObject(obj) {
     // Remove it from our list of objects
     obj.destroy();
-    this.objects = this.objects.filter(o => o !== obj);
+    this.objects = this.objects.filter(o => o.object !== obj);
+
+    // Remove it from our list of objects by guid
+    if (obj.guid) {
+      this.objectsByGuid[obj.guid]--;
+      if (this.objectsByGuid[obj.guid] <= 0) {
+        delete this.objectsByGuid[obj.guid];
+      }
+    }
   }
 
   play() {
@@ -162,6 +221,14 @@ export class World {
 
   pause() {
     this.paused = true;
+  }
+
+  reset() {
+    this.objects.forEach(o => {
+      this.removeObject(o.object)
+    });
+    this.app.loadConfig();
+
   }
 
   animate() {
@@ -183,6 +250,28 @@ export class World {
       }
     }) 
     this.renderer.render(this.scene, this.camera)
+  }
+
+  // Return all the configuration for all the objects
+  getConfig() {
+    let config = {
+      objects: [],
+    }
+
+    for (let obj of this.objects) {
+      const cfg = obj.object.getConfig() || {};
+      cfg.type  = obj.type;
+      config.objects.push(cfg);
+    }
+
+    return config;
+  }
+
+  // Set the configuration for all the objects
+  setConfig(config) {
+    for (let obj of config.objects) {
+      this.addObject(obj.type, obj);
+    }
   }
 
 }

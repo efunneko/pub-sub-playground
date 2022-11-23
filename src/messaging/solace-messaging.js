@@ -16,7 +16,7 @@ export class SolaceMessaging extends Messaging {
 
   connect() {
     let opts = {
-      url:      this.host,
+      url:      this.url,
       userName: this.username,
       password: this.password,
       vpnName:  this.vpnName || "default",
@@ -86,11 +86,11 @@ export class SolaceMessaging extends Messaging {
 
   }
 
-  subscribe(qos, subscription, callback) {
+  subscribe(qos, subscription) {
 
     subscription = this.adjustSubscription(subscription);
 
-    const subId = super.subscribe(qos, subscription, callback);
+    super.subscribe(qos, subscription);
 
     if (this.session) {  
 
@@ -108,7 +108,6 @@ export class SolaceMessaging extends Messaging {
 
     console.log("added sub", subscription, this.session)
 
-    return subId;
   }
 
   _subscribe(subscription) {
@@ -117,7 +116,6 @@ export class SolaceMessaging extends Messaging {
       console.log("Subscribing to topic: " + subscription);
       this.session.subscribe(
         solace.SolclientFactory.createTopic(subscription),
-
         true,
         subscription,
         10000

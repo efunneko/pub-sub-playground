@@ -17,23 +17,29 @@ export class DynamicObject extends BaseObject {
 
   }
 
-  // Register this object with the physics engine
-  registerWithPhysics(body) {
-    this.body = body
-    this.physics.addBody(body)
+  isStatic() {
+    return false
   }
 
   // Called from the physics engine to update the position of the object
   update(body) {
-    this.group.position.x = body.position.x
-    this.group.position.y = -body.position.y
-    this.group.rotation.z = -body.angle
     //console.log("update", this.group.position.x, this.group.position.y, body.angle)
+    this.setValues({
+      x:        body.position.x,
+      y:        -body.position.y,
+      rotation: -body.angle,
+    })
   }
 
-  // Called when the object is destroyed
-  destroy() {
-    this.physics.removeBody(this.body)
+  // Event handler for position changes
+  onPositionChange() {
+    this.group.position.x = this.x
+    this.group.position.y = this.y
+  }
+
+  // Event handler for rotation changes
+  onRotationChange() {
+    this.group.rotation.z = this.rotation
   }
 
 }

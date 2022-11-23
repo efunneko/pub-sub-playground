@@ -9,7 +9,10 @@ export class Body extends jst.Component {
     this.app           = app;
     this.width         = width;
     this.height        = height;
-    this.setPage("home");
+
+    // TBD - will we ever need multiple pages?
+    // this.setPage("home");
+
 
   }
 
@@ -31,7 +34,6 @@ export class Body extends jst.Component {
         events: {
         },
       },
-      this.currPage 
     );
   }
 

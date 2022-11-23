@@ -12,6 +12,7 @@ export class App extends jst.Component {
     
     this.title              = "Solly Goldberg";
     this.alerts             = [];
+    this.brokers            = [];
           
     this.width              = window.innerWidth;
     this.height             = window.innerHeight;
@@ -20,12 +21,14 @@ export class App extends jst.Component {
  
     this.scaleFactor        = 50;
 
-    this.body               = new Body(this, this.width, this.height, this.fontScale);
-
     this.ui                 = new UI(this, {});
+
+    this.body               = new Body(this, this.width, this.height, this.fontScale);
 
     this.world              = new World(this, {ui: this.ui})
 
+    this.pendingSave        = false
+    
     // Listen for window resize events
     window.onresize = e => this.resize();
 
@@ -49,6 +52,36 @@ export class App extends jst.Component {
     }, 100);
   }
 
+  reset() {
+    this.world.reset();
+  }
+  
+  // Get all the config from the world and save it in local storage
+  saveConfig() {
+    let config = {};
+    config.world = this.world.getConfig();
+    localStorage.setItem("config", JSON.stringify(config));
+    this.setPendingSave(false);
+  }
+
+  // Load the config from local storage
+  loadConfig() {
+    let config = localStorage.getItem("config");
+    if (config) {
+      config = JSON.parse(config);
+      this.world.setConfig(config.world);
+      this.setPendingSave(false);
+    }
+  }
+
+  setPendingSave(val) {
+    if (val && this.autoSave) {
+      this.saveConfig();
+    } else {
+      this.ui.setPendingSave(val);
+    }
+  }
+
   play() {
     //this.physicsEngine.play();
     this.world.play();
@@ -67,6 +100,10 @@ export class App extends jst.Component {
     return this.physicsEngine;
   }
 
+  getWorld() {
+    return this.world;
+  }
+
   scale(...args) {
     if (args.length == 1) {
       return args[0] * this.scaleFactor;
@@ -75,23 +112,35 @@ export class App extends jst.Component {
     }
   }
 
-  // Rotates a point around a specified point given by an angle in radians
-  rotatePoint(cx, cy, x, y, angle) {
-    var s = Math.sin(angle);
-    var c = Math.cos(angle);
+  registerBroker(broker) {
+    // Check if we already have this broker
+    if (this.brokers.indexOf(broker) == -1) {
+      this.brokers.push(broker);
+    }
+  }
 
-    // translate point back to origin:
-    x -= cx;
-    y -= cy;
+  unregisterBroker(broker) {
+    let index = this.brokers.indexOf(broker);
+    if (index != -1) {
+      this.brokers.splice(index, 1);
+    }
+  }
 
-    // rotate point
-    var xnew = x * c - y * s;
-    var ynew = x * s + y * c;
+  getBrokerByName(name) {
+    for (let broker of this.brokers) {
+      if (broker.getName() == name) {
+        return broker;
+      }
+    }
+    return null;
+  }
 
-    // translate point back:
-    x = xnew + cx;
-    y = ynew + cy;
-    return [x, y];
+  getBrokers() {
+    return this.brokers;
+  }
+
+  isEditMode() {
+    return this.ui.isEditMode();
   }
 
 }

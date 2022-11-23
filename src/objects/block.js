@@ -3,6 +3,7 @@
 import * as THREE             from 'three' 
 import {DynamicObject}        from './dynamic-object.js'
 import {Assets}               from '../assets.js'
+import {utils}                from '../utils.js'
 
 
 const defaultDepth         = 60
@@ -17,23 +18,40 @@ export class Block extends DynamicObject {
     this.width  = opts.width  || defaultWidth
     this.height = opts.height || defaultHeight
     this.depth  = opts.depth  || defaultDepth
+    this.color  = opts.color  || "#f0e6d6"
     this.uis    = app.ui.getUiSelection();
 
+    this.configParams = this.initConfigParams([
+      {name: 'width',  type: 'text', label: 'Width'},
+      {name: 'height', type: 'text', label: 'Height'},
+      {name: 'color',  type: 'color', label: 'Color'},
+      {name: "x", type: "hidden", eventLabels: ["position"]},
+      {name: "y", type: "hidden", eventLabels: ["position"]},
+      {name: "rotation", type: "hidden", eventLabels: ["rotation"]},      
+    ]);
+
     this.create()
+
+    // This is necessary to run in the case when physics is disabled
+    this.setValues({
+      x: this.x,
+      y: this.y,
+      rotation: this.rotation,
+    })
 
   }
 
   create() {
+    super.create();
 
     // Create the geometry for the ball
     //const geometry = new THREE.BoxGeometry(this.width, this.height, this.depth);
-    const geometry = this.createRoundedBoxGeometry(this.width, this.height, this.depth, 3, 8);
+    const geometry = utils.createRoundedBoxGeometry(this.width, this.height, this.depth, 3, 8);
 
     // Create the material
     const material = new THREE.MeshStandardMaterial({
       roughnessMap:      Assets.textures.stainlessSteelTexture.rough,
-      // ivory color
-      color:             0xf0e6d6,
+      color:             this.color,
       metalness:         0.1,
       roughness:         1,
     });
@@ -64,45 +82,25 @@ export class Block extends DynamicObject {
       onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
       onSelected: (obj) => obj.material = new THREE.MeshStandardMaterial({color: 0xf0e686, emissive: 0x333308}),
       onUnselected: (obj) => obj.material = new THREE.MeshStandardMaterial({color: 0xf0e6d6, emissive: 0x000000}),
-      onDelete: (obj) => this.destroy()
+      onDelete: (obj) => this.removeFromWorld(),
+      configForm: {
+        save: (form) => this.saveConfigForm(form),
+        obj: this,
+        fields: this.configParams
+      }
     });
 
   }
 
   destroy() {
-    console.log("Destroying block");
-    this.app.getPhysicsEngine().removeBody(this.body);
-    this.group.remove(this.mesh);
-    this.uis.unregisterObject(this.mesh);
+    super.destroy();
   }
 
   createPhysicsBody() {
     // Create the physics body
     this.body = this.app.getPhysicsEngine().createBox(this, this.x, -this.y, this.width, this.height, {restitution: 0.1, friction: 0.2, inertia: 0});
+    this.mesh.userData.physicsBody = this.body;
   }
-
-  createRoundedBoxGeometry(width, height, depth, radius0, smoothness) {
-    let shape = new THREE.Shape();
-    let eps = 0.00001;
-    let radius = radius0 - eps;
-    shape.absarc( eps, eps, eps, -Math.PI / 2, -Math.PI, true );
-    shape.absarc( eps, height -  radius * 2, eps, Math.PI, Math.PI / 2, true );
-    shape.absarc( width - radius * 2, height -  radius * 2, eps, Math.PI / 2, 0, true );
-    shape.absarc( width - radius * 2, eps, eps, 0, -Math.PI / 2, true );
-    let geometry = new THREE.ExtrudeGeometry( shape, {
-      steps: 1,
-      depth: depth - radius0 * 2,
-      bevelEnabled: true,
-      bevelSegments: smoothness * 2,
-      bevelSize: radius,
-      bevelThickness: radius0,
-      curveSegments: smoothness
-    });
-    
-    geometry.center();
-    
-    return geometry;
-  }    
 
   onMove(obj, pos, info) {
     // Change the position of the physics body
@@ -117,5 +115,13 @@ export class Block extends DynamicObject {
 
   onUp(obj, pos, info) {
     this.body.setDynamic();
+    this.saveableConfigChanged();
+  }
+
+  saveConfigForm(form) {
+    this.setValues(form);
+    this.destroy();
+    this.create();
+    this.saveableConfigChanged();
   }
 }

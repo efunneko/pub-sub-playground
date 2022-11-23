@@ -29,27 +29,24 @@ export class Barrier extends StaticObject {
     // Set to true if a new barrier is being created during a drag
     this.creatingBarrier = false;
 
+    // All the persistent parameters for the barrier
+    this.configParams = this.initConfigParams([
+      {name: "points", type: "hidden"},
+    ]);
+
     // Now create the barrier
     this.create()
 
   }
 
   create() {
-
-    // Create the barrier
+    super.create();
     this.createBarrier();
-
   }
 
   destroy() {
-    
-
-    // Destroy the barrier
-    this.destroyBarrier();
-
-    // Set the destroyed flag
+    super.destroy();    
     this.destroyed = true;
-
   }
 
   // Create a shape from the points
@@ -77,6 +74,7 @@ export class Barrier extends StaticObject {
       selectable:        true,
       onDown:            (obj, pos, info) => this.onDownBarrier(obj, pos, info),
       onMove:            (obj, pos, info) => this.onMoveBarrier(obj, pos, info),
+      onUp:              (obj, pos, info) => this.onUpBarrier(obj, pos, info),
       onSelected:        (obj) => this.onSelectedBarrier(obj),
       onUnselected:      (obj) => this.onUnselectedBarrier(obj),
       onDelete:          (obj) => this.onDeleteBarrier(obj),
@@ -140,24 +138,14 @@ export class Barrier extends StaticObject {
 
   }
 
-  destroyBarrier() {
-    this.group.children.forEach(child => {
-      if (child.userData.physicsBody !== undefined) {
-        this.app.getPhysicsEngine().removeBody(child.userData.physicsBody);
-      }
-    });
-
-    this.group.remove(...this.group.children);
-
-  }
-
   createCylinder(p, material, uisInfo) {
-    let cylinder    = new THREE.CylinderGeometry(defaultBarrierWidth/2, defaultBarrierWidth/2, defaultBarrierDepth, 8);
+    const cylinderDepth = defaultBarrierDepth*1.005;
+    let cylinder    = new THREE.CylinderGeometry(defaultBarrierWidth/2, defaultBarrierWidth/2, cylinderDepth, 16);
     let mesh        = new THREE.Mesh(cylinder, material);
 
     mesh.position.x = p.x;
     mesh.position.y = p.y;
-    mesh.position.z = defaultBarrierDepth / 2;
+    mesh.position.z = cylinderDepth / 2;
     mesh.rotation.x = Math.PI / 2;
 
     mesh.receiveShadow = this.useShadows;
@@ -203,6 +191,7 @@ export class Barrier extends StaticObject {
       selectedMaterial:  new THREE.MeshPhongMaterial({color: 0xbbbb55, specular: 0x111111, shininess: 200}),
       onDown:            (obj, pos, info) => this.onDownScrewHead(screwHead, pos, info),
       onMove:            (obj, pos, info) => this.onMoveScrewHead(screwHead, pos, info),
+      onUp:              (obj, pos, info) => this.onUpScrewHead(screwHead, pos, info),
       onDelete:          (obj) => this.onDeleteScrewHead(screwHead),
     };
 
@@ -229,9 +218,7 @@ export class Barrier extends StaticObject {
   }
 
   onDeleteBarrier(obj) {
-    // TODO - notify higher-level that the barrier has been deleted
-    this.destroyed = true;
-    this.destroyBarrier();
+    this.removeFromWorld();
   }
 
   onDownScrewHead(screwHead, pos, info) {
@@ -252,10 +239,15 @@ export class Barrier extends StaticObject {
     this.recreateBarrier();
   }
 
+  onUpScrewHead(screwHead, pos, info) {
+    this.saveableConfigChanged();
+  }
+
   onDeleteScrewHead(screwHead) {
     // Remove the point from the array
     this.points.splice(screwHead.parent.userData.index, 1);
     this.recreateBarrier();
+    this.saveableConfigChanged();
   }
 
   onDownBarrier(obj, pos, info) {
@@ -284,9 +276,15 @@ export class Barrier extends StaticObject {
       point.x = this.startPoints[i].x + this.snapToGridSingle(pos.x - info.posAtMouseDown.x);
       point.y = this.startPoints[i].y + this.snapToGridSingle(pos.y - info.posAtMouseDown.y);
     });
+
     this.recreateBarrier();
 
   }    
+
+  onUpBarrier(obj, pos, info) {
+    console.log("onUpBarrier");
+    this.saveableConfigChanged();
+  }
 
   addPoint(obj, index, x, y) {
 
@@ -321,11 +319,8 @@ export class Barrier extends StaticObject {
   }
 
   recreateBarrier() { 
-      // Destroy the current barrier
-      this.destroyBarrier();
-  
-      // Create the new barrier
-      this.createBarrier();
-    }
+    this.destroy()
+    this.create()
+  }
  
 }

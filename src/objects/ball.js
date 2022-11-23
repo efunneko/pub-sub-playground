@@ -13,13 +13,32 @@ export class Ball extends DynamicObject {
     super(app, opts)
 
     this.radius = opts.radius || defaultRadius
+    this.color  = opts.color
     this.uis    = app.ui.getUiSelection();
 
+    this.configParams = this.initConfigParams([
+      {name: "x", type: "hidden", eventLabels: ["position"]},
+      {name: "y", type: "hidden", eventLabels: ["position"]},
+      {name: "rotation", type: "hidden", eventLabels: ["rotation"]},      
+      {name: "radius", type: "text", label: "Radius", eventLabels: ["appearance"]},
+      {name: "color", type: "color", label: "Color", eventLabels: ["appearance"]},
+    ])
+
     this.create()
+
+    // This is necessary to run in the case when physics is disabled
+    this.setValues({
+      x: this.x,
+      y: this.y,
+      rotation: this.rotation,
+    })
 
   }
 
   create() {
+    super.create();
+
+    console.log('Ball.create', this, this.x, this.y);
 
     // Create the geometry for the ball
     const geometry = new THREE.SphereGeometry(this.radius, 32, 32);
@@ -31,6 +50,13 @@ export class Ball extends DynamicObject {
       metalness:         0.1,
       roughness:         1,
     });
+
+    if (this.color) {
+      // set the emissive color to the color of the ball
+      material.emissive = new THREE.Color(this.color);
+      material.emissiveIntensity = 0.1;
+      material.color.set(this.color);      
+    }
 
     // Create the mesh
     const mesh = new THREE.Mesh(geometry, material);
@@ -46,14 +72,21 @@ export class Ball extends DynamicObject {
     this.group.add(mesh);
 
     // Do the same for the physics engine
-    this.createPhysicsBody();
+    mesh.userData.physicsBody = this.createPhysicsBody();
 
     // Register with the selection manager
     this.uis.registerObject(mesh, {
       moveable: true,
-      onMove: (obj, pos, info) => this.onMove(obj, pos, info),
-      onDown: (obj, pos, info) => this.onDown(obj, pos, info),
-      onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
+      selectable: true,
+      onMove:   (obj, pos, info) => this.onMove(obj, pos, info),
+      onDown:   (obj, pos, info) => this.onDown(obj, pos, info),
+      onUp:     (obj, pos, info) => this.onUp(obj, pos, info),
+      onDelete: (obj) => this.removeFromWorld(),
+      configForm: {
+        save: (form) => this.saveConfigForm(form),
+        obj: this,
+        fields: this.configParams
+      }
     });
 
   }
@@ -61,6 +94,7 @@ export class Ball extends DynamicObject {
   createPhysicsBody() {
     // Create the physics body
     this.body = this.app.getPhysicsEngine().createCircle(this, this.x, -this.y, this.radius, {restitution: 0.4, friction: 0.8, inertia: 0});
+    return this.body;
   }
 
   onMove(obj, pos, info) {
@@ -77,5 +111,6 @@ export class Ball extends DynamicObject {
 
   onUp(obj, pos, info) {
     this.body.setDynamic();
+    this.saveableConfigChanged();
   }
 }
