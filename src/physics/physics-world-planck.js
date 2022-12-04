@@ -15,7 +15,9 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
     super(app, opts)
     this.objectRefs        = {};
     this.collisionHandlers = {};
+    this.destroyList       = [];
     this.worldScale        = opts && opts.worldScale || defaultWorldScale;
+    this.nextBodyId        = 1;
 
     this.init()
 
@@ -54,6 +56,14 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
 
   doPhysics(time) {
 
+    // If there are pending destroy bodies, do it now
+    if (this.destroyList.length > 0) {
+      this.destroyList.forEach((body) => {
+        this.world.destroyBody(body);
+      });
+      this.destroyList = [];
+    }
+
     //console.warn("doPhysics", time) 
     let delta = (time - this.lastTime) || 16;
     if (delta > 50) {
@@ -63,7 +73,7 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
     try {      
 
       const velocityIterations = 4;
-      const positionIterations = 4;
+      const positionIterations = 8;
       let step = delta / 1000;
       //step = 1/60;
       //console.log("step", time, delta, step)
@@ -77,7 +87,7 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
         if (obj) {
           let pos = body.getPosition();
           if (Math.abs(pos.x) > 10000 || Math.abs(pos.y) > 10000) {
-            object.destroy();
+            obj.destroy();
           }
           else {
             const bodyInfo = {
@@ -100,16 +110,30 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
 
   }
 
-  collision(e) {
-    // todo
+  collision(contact) {
+    let bodyA = contact.getFixtureA().getBody();
+    let bodyB = contact.getFixtureB().getBody();
+
+    if (this.collisionHandlers[bodyA.id]) {
+      this.collisionHandlers[bodyA.id](bodyB, bodyB.getUserData());
+    }
+    if (this.collisionHandlers[bodyB.id]) {
+      this.collisionHandlers[bodyB.id](bodyA, bodyA.getUserData());
+    }
+
   }
 
   createBody(object, x, y, opts) {
-    return this.world.createBody({
+    const body = this.world.createBody({
       type:     opts.isStatic ? 'static' : 'dynamic',
       position: planck.Vec2(this.scale(x), this.scale(-y)),
       angle:    -opts.angle || 0,
     })
+    body.id = this.nextBodyId++;
+    if (opts.onCollision) {
+      this.collisionHandlers[body.id] = opts.onCollision;
+    }
+    return body
   }
 
   // Create functions
@@ -150,7 +174,7 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
     if (this.collisionHandlers[body.id]) {
       delete(this.collisionHandlers[body.id]);
     }
-    this.world.destroyBody(body);
+    this.destroyList.push(body)
   }
 
   fixCreateOpts(opts) {
@@ -190,5 +214,39 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
     return val / this.worldScale;
   } 
 
+  /*
+  // Handle collisions
+  handleCollision(contact, oldManifold) {
+    //world.on('pre-solve', function(contact, oldManifold) {
+      let worldManifold = contact.getWorldManifold();
+  
+      let bodyA = contact.getFixtureA().getBody();
+      let bodyB = contact.getFixtureB().getBody();
+  
+      console.log("Collision", bodyA, bodyB);
+  
+      return;
+    
+      let state1 = []; // [PointState]
+      let state2 = []; // [PointState]
+      getPointStates(state1, state2, oldManifold, contact.getManifold());
+    
+      if (state2[0] === PointState.addState) {
+        let bodyA = contact.getFixtureA().getBody();
+        let bodyB = contact.getFixtureB().getBody();
+        let point = worldManifold.points[0];
+        let vA = bodyA.getLinearVelocityFromWorldPoint(point);
+        let vB = bodyB.getLinearVelocityFromWorldPoint(point);
+    
+        let approachVelocity = Vec2.dot(vB -- vA, worldManifold.normal); //[todo]
+    
+        if (approachVelocity > 1) {
+          myPlayCollisionSound();
+        }
+      }
+    }
+    //});  
+  
+*/
 
 }

@@ -9,6 +9,7 @@ import {Portal}             from './objects/portal.js'
 import {Barrier}            from './objects/barrier.js'
 import {Note}               from './objects/note.js'
 import {Broker}             from './objects/broker.js'
+import {Emitter}            from './objects/emitter.js'
 import {PhysicsWorld}       from './physics/physics-world.js'
 import {PhysicsWorldMatter} from './physics/physics-world-matter.js';
 import {PhysicsWorldPlanck} from './physics/physics-world-planck.js';
@@ -28,6 +29,7 @@ const ObjectTypeToClass = {
   'barrier': Barrier,
   'note':    Note,
   'broker':  Broker,
+  'emitter': Emitter,
 };
 
 export class World {
@@ -159,7 +161,7 @@ export class World {
 
   }
 
-  addObject(type, opts, guid) {
+  addObject(type, opts, guid, ephemeral) {
 
     if (!guid) {
       guid = utils.guid();
@@ -179,7 +181,9 @@ export class World {
     obj.guid = guid;
 
     // Put it on our list of objects
-    this.objects.push({type: type, object: obj});
+    if (!ephemeral) {
+      this.objects.push({type: type, object: obj});
+    }
 
     return obj;
   }
@@ -193,7 +197,8 @@ export class World {
       return;
     }
 
-    let obj = this.addObject(messagePayload.type, messagePayload, guid);
+    console.log("Adding object", messagePayload, topic, guid);
+    let obj = this.addObject(messagePayload.type, messagePayload, guid, true);
     obj.topic = topic;
 
     this.objectsByGuid[guid] = this.objectsByGuid[guid] ? this.objectsByGuid[guid]++ : 1;
@@ -269,8 +274,11 @@ export class World {
 
   // Set the configuration for all the objects
   setConfig(config) {
+    let count = 0;
     for (let obj of config.objects) {
-      this.addObject(obj.type, obj);
+      if (count++ < 20) {
+        this.addObject(obj.type, obj);
+      }
     }
   }
 

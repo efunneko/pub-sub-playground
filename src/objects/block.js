@@ -15,15 +15,20 @@ export class Block extends DynamicObject {
   constructor(app, opts) {
     super(app, opts)
 
-    this.width  = opts.width  || defaultWidth
-    this.height = opts.height || defaultHeight
-    this.depth  = opts.depth  || defaultDepth
-    this.color  = opts.color  || "#f0e6d6"
-    this.uis    = app.ui.getUiSelection();
+    this.width      = opts.width  || defaultWidth
+    this.height     = opts.height || defaultHeight
+    this.depth      = opts.depth  || defaultDepth
+    this.color      = opts.color  || "#f0e6d6"
+    this.edgeRadius = opts.edgeRadius || 3
+    this.friction   = opts.friction || 0.2
+    this.uis        = app.ui.getUiSelection();
 
     this.configParams = this.initConfigParams([
       {name: 'width',  type: 'text', label: 'Width'},
       {name: 'height', type: 'text', label: 'Height'},
+      // We can only enable this if we match the same shape in planck
+      //{name: 'edgeRadius', type: 'text', label: 'Edge Radius'},
+      {name: 'friction',  type: 'text', label: 'Friction (0-1)'},
       {name: 'color',  type: 'color', label: 'Color'},
       {name: "x", type: "hidden", eventLabels: ["position"]},
       {name: "y", type: "hidden", eventLabels: ["position"]},
@@ -39,6 +44,8 @@ export class Block extends DynamicObject {
       rotation: this.rotation,
     })
 
+    this.setInitialVelocity(opts)
+    
   }
 
   create() {
@@ -46,7 +53,7 @@ export class Block extends DynamicObject {
 
     // Create the geometry for the ball
     //const geometry = new THREE.BoxGeometry(this.width, this.height, this.depth);
-    const geometry = utils.createRoundedBoxGeometry(this.width, this.height, this.depth, 3, 8);
+    const geometry = utils.createRoundedBoxGeometry(this.width, this.height, this.depth, this.edgeRadius, 8);
 
     // Create the material
     const material = new THREE.MeshStandardMaterial({
@@ -98,7 +105,7 @@ export class Block extends DynamicObject {
 
   createPhysicsBody() {
     // Create the physics body
-    this.body = this.app.getPhysicsEngine().createBox(this, this.x, -this.y, this.width, this.height, {restitution: 0.1, friction: 0.2, inertia: 0});
+    this.body = this.app.getPhysicsEngine().createBox(this, this.x, -this.y, this.width, this.height, {angle: -this.rotation, restitution: 0.1, friction: this.friction, inertia: 0});
     this.mesh.userData.physicsBody = this.body;
   }
 

@@ -29,7 +29,7 @@ export class MqttMessaging extends Messaging {
       if (this.subscriptions.length) {
         this.subscriptions.forEach(sub => {
           console.log("subscribing:", sub)
-          this.client.subscribe(sub.sub, {qos: sub.qos});
+          this.client.subscribe(sub.subscription, {qos: sub.qos, nl: true});
         });
       }
     })
@@ -42,10 +42,10 @@ export class MqttMessaging extends Messaging {
     this.client.end();
   }
 
-  subscribe(qos, subscription, callback) {
+  subscribe(qos, subscription) {
     subscription = this.adjustSubscription(subscription);
     
-    const subId = super.subscribe(qos, subscription, callback);
+    super.subscribe(qos, subscription);
 
     if (this.client) {      
       this.client.subscribe(subscription, {qos: qos});
@@ -53,11 +53,10 @@ export class MqttMessaging extends Messaging {
 
     console.log("added sub", subscription)
 
-    return subId;
   }
 
-  unsubscribe(subId) {
-    super.unsubscribe(subId);
+  unsubscribe(subscription) {
+    super.unsubscribe(subscription);
   }
 
   _unsubscribe(subscription) {

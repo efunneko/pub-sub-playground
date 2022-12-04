@@ -15,6 +15,7 @@ export class Note extends StaticObject {
     this.width    = opts.width;
     this.height   = opts.height;
     this.fontSize = opts.fontSize || 24;
+    this.color    = '#5555ff';
 
     this.uis    = app.ui.getUiSelection();
 
@@ -44,16 +45,15 @@ export class Note extends StaticObject {
         fontSize: this.fontSize,
         padding: 5,
         color: 'white',
-        backgroundColor: '#5555ff',
+        backgroundColor: this.color,
       });
-      console.log('Note.create 1', texture, height, width);
+
       this.texture = texture;
       this.width   = width;
       this.height  = height;
     }
 
     // Create the geometry for the note
-    console.log('Note.create', this.width, this.height);
     const geometry = new THREE.BoxGeometry(this.width, this.height, 1);
 
     // Create the material
@@ -182,12 +182,9 @@ export class Note extends StaticObject {
   }
 
   saveConfigForm(form) {
-    console.log('Note.saveConfigForm', form);
-    this.title    = form.title;
-    this.text     = form.text;
-    this.fontSize = form.fontSize;
-    this.destroy();
-    this.create();
+    this.setValues(form)
+    this.reDraw();
+    this.saveableConfigChanged();
   }
       
 

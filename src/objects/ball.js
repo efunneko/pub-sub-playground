@@ -13,15 +13,17 @@ export class Ball extends DynamicObject {
     super(app, opts)
 
     this.radius = opts.radius || defaultRadius
-    this.color  = opts.color
+    this.color  = opts.color || 0xffffff
     this.uis    = app.ui.getUiSelection();
 
     this.configParams = this.initConfigParams([
       {name: "x", type: "hidden", eventLabels: ["position"]},
       {name: "y", type: "hidden", eventLabels: ["position"]},
       {name: "rotation", type: "hidden", eventLabels: ["rotation"]},      
-      {name: "radius", type: "text", label: "Radius", eventLabels: ["appearance"]},
+      {name: "radius", type: "text", width: 5, label: "Radius", eventLabels: ["appearance"]},
       {name: "color", type: "color", label: "Color", eventLabels: ["appearance"]},
+      {name: "forceTopic", type: "boolean", label: "Force Topic", eventLabels: ["topic"], title: "Use the configured topic when going through a portal"},
+      {name: "topic", type: "text", width: 50, label: "Topic", eventLabels: ["topic"], title: "If Force Topic is true, this topic is used when going through a portal"},
     ])
 
     this.create()
@@ -32,6 +34,8 @@ export class Ball extends DynamicObject {
       y: this.y,
       rotation: this.rotation,
     })
+
+    this.setInitialVelocity(opts)
 
   }
 
@@ -72,7 +76,7 @@ export class Ball extends DynamicObject {
     this.group.add(mesh);
 
     // Do the same for the physics engine
-    mesh.userData.physicsBody = this.createPhysicsBody();
+    mesh.userData.physicsBodies = [this.createPhysicsBody()];
 
     // Register with the selection manager
     this.uis.registerObject(mesh, {

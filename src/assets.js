@@ -24,6 +24,9 @@ export class Assets {
       woodTexture: {},
       stainlessSteelTexture: {},
       brass: {},
+      greasyMetal: {},
+      ridges: {},
+      icons: {},
     };
 
     return Promise.all([
@@ -53,6 +56,30 @@ export class Assets {
       }),
       loader.loadAsync("images/textures/used-stainless-steel2_small_roughness.png").then((texture) => {
         Assets.textures.stainlessSteelTexture.rough = texture;
+      }),
+      loader.loadAsync("images/textures/greasy-pan-2-albedo.png").then((texture) => {
+        Assets.textures.greasyMetal.albedo = texture;
+      }),
+      loader.loadAsync("images/textures/greasy-pan-2-normal.png").then((texture) => {
+        Assets.textures.greasyMetal.normal = texture;
+      }),
+      loader.loadAsync("images/textures/greasy-pan-2-roughness.png").then((texture) => {
+        Assets.textures.greasyMetal.rough = texture;
+      }),
+      loader.loadAsync("images/textures/greasy-pan-2-metal.png").then((texture) => {
+        Assets.textures.greasyMetal.metallic = texture;
+      }),
+      loader.loadAsync("images/textures/ridges_displacement.png").then((texture) => {
+        Assets.textures.ridges.displacement = texture;
+      }),
+      loader.loadAsync("images/textures/play_icon.png").then((texture) => {
+        Assets.textures.icons.play = texture;
+      }),
+      loader.loadAsync("images/textures/pause_icon.png").then((texture) => {
+        Assets.textures.icons.pause = texture;
+      }),
+      loader.loadAsync("images/textures/step_icon.png").then((texture) => {
+        Assets.textures.icons.step = texture;
       }),
     ])
   }

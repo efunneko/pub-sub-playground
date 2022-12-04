@@ -14,8 +14,8 @@ export class BaseObject {
     // Threejs scene for 3d rendering
     this.scene  = opts.scene;
 
-    // Matterjs for physics stuff
-    this.matter = opts.matter;
+    // The physics engine
+    this.physics  = this.app.getPhysicsEngine()
 
     // We can optionally have shadows
     this.useShadows = opts.useShadows;
@@ -28,6 +28,9 @@ export class BaseObject {
 
     // Keep list of event handlers for parameter type changes
     this.paramEventLabels = {};
+
+    // Keep the creation time
+    this.creationTime = Date.now();
 
   }
 
@@ -43,6 +46,11 @@ export class BaseObject {
       if (child.userData.physicsBody !== undefined) {
         this.app.getPhysicsEngine().removeBody(child.userData.physicsBody);
       }
+      else if (child.userData.physicsBodies) {
+        child.userData.physicsBodies.forEach(body => {
+          this.app.getPhysicsEngine().removeBody(body);
+        })
+      }
       this.group.remove(child);
     });
 
@@ -50,7 +58,15 @@ export class BaseObject {
   }
 
   initConfigParams(params) {
+
+    // Add the object type to the config params
+    //params.push({name: 'type', type: 'hidden', value: this.constructor.name.toLowerCase()});
+
+    // Adjust each of the config params
     params.forEach(param => {
+
+      param.value = this[param.name];
+       
       // Handle the initial value
       if (Array.isArray(this[param.name])) {
         param.initialValue = this[param.name].slice(0);
@@ -64,7 +80,6 @@ export class BaseObject {
 
       // Handle event handlers
       if (param.eventLabels) {
-        console.log("Adding event labels for " + param.name);
         this.paramEventLabels[param.name] = [];
         param.eventLabels.forEach(label => {
           // Capitalize the first letter
@@ -78,7 +93,6 @@ export class BaseObject {
         });
       }
     });
-    console.log("PEL", this.paramEventLabels);
 
     return params;
   }
@@ -102,13 +116,19 @@ export class BaseObject {
     if (this.configParams) {
       const config = {};
       this.configParams.forEach(param => {
-        config[param.name] = this[param.name];
+        if (param.type == "subObject") {
+          config[param.name] = this[param.name].getConfig();
+        }
+        else {
+          config[param.name] = this[param.name];
+        }
       });
       return config;
     }
   }
 
   getValue(paramName) {
+    console.log(`getValue(${paramName}) = ${this[paramName]}`);
     return this[paramName];
   }
 
@@ -152,6 +172,9 @@ export class BaseObject {
     this.x += info.deltaPos.x;
     this.y += info.deltaPos.y;
     this.group.position.set(this.x, this.y, this.z);
+    if (this.redrawOnMove) {
+      this.reDraw();
+    }
   }
 
   onAppearanceChange() {
@@ -164,7 +187,6 @@ export class BaseObject {
   }
 
   saveConfigForm(form) {
-    console.log('saveConfigForm', form);
     this.setValues(form);
   }
 

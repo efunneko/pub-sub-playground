@@ -16,8 +16,8 @@ export class Broker extends StaticObject {
     this.uis    = app.ui.getUiSelection();
 
     this.height = this.app.scale(brokerHeight)
-    this.name   = opts.name || 'vmr-133-11';
-    this.url    = opts.url || 'ws://vmr-133-11:8008';
+    this.name   = opts.name       || '<unnamed>';
+    this.url    = opts.url        || 'ws://<host>:<port>';
     this.protocol = opts.protocol || 'smf';
     this.username = opts.username || 'default';
     this.password = opts.password || 'default';
@@ -106,8 +106,8 @@ export class Broker extends StaticObject {
   }
 
   createConnection(opts) {
-    opts.url      = opts.url || this.url;
-    opts.name     = opts.name || this.name;
+    opts.url      = opts.url      || this.url;
+    opts.name     = opts.name     || this.name;
     opts.protocol = opts.protocol || this.protocol;
     opts.username = opts.username || this.username;
     opts.password = opts.password || this.password;

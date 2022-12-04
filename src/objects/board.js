@@ -23,12 +23,15 @@ export class Board extends StaticObject {
     // The board never rotates
     this.rotation = 0;
 
+    // Get the UI Selection Manager
+    this.uis = this.app.ui.getUiSelection();
 
     this.create()
 
   }
 
   create() {
+    super.create();
 
     const ea = this.app.scale(edgeWidth) / 2
 
@@ -37,6 +40,7 @@ export class Board extends StaticObject {
     this.createEdge(this.x1, this.y1+ea, this.x1, this.y2-ea);
     this.createEdge(this.x1-ea, this.y2, this.x2+ea, this.y2);
     this.createEdge(this.x2, this.y1+ea, this.x2, this.y2-ea);
+    this.createScrewHeads();
     //this.createEdge(this.x1+3*ea, this.y1+45*ea, this.x2-10*ea, this.y1+35*ea);
     //this.createEdge(this.x1+10*ea, this.y1+20*ea, this.x2-3*ea, this.y1+25*ea);
 
@@ -68,7 +72,7 @@ export class Board extends StaticObject {
     back.receiveShadow = this.useShadows;
 
     // Add it to the scene
-    this.scene.add(back);
+    this.group.add(back);
     
   }
 
@@ -115,15 +119,84 @@ export class Board extends StaticObject {
     edge.castShadow    = this.useShadows;
 
     // Add it to the scene
-    this.scene.add(edge);
+    this.group.add(edge);
 
     // And add the edge to the physics world
     const cx = (x1 + x2) / 2;
     const cy = (y1 + y2) / 2;
     console.log("Creating edge at " + cx + ", " + cy + " with length " + length + " and angle " + angle);
     console.log("phys engine is " + this.app.getPhysicsEngine());
-    this.app.getPhysicsEngine().createBox(this, cx, -cy, length, width,{isStatic: true, angle: -angle, friction: 0.9, restitution: 0.2});
+    let body = this.app.getPhysicsEngine().createBox(this, cx, -cy, length, width,{isStatic: true, angle: -angle, friction: 0.9, restitution: 0.2});
+    edge.userData.physicsBody = body;
 
+  }
+
+  createScrewHeads() {
+
+    this.screwHeads = [];
+
+    // Make four screw heads
+    [[0,0], [0,1], [1,1], [1,0]].forEach((cornerCoords) => {
+
+      const x = cornerCoords[0] ? this.x2 : this.x1;
+      const y = cornerCoords[1] ? this.y2 : this.y1;
+
+      // Clone the screw head
+      let screwHead = Assets.models.screwHead.clone();
+
+      // Scale the screw head
+      screwHead.scale.set(1, 1, 1);
+      screwHead.rotation.x = Math.PI / 2;
+      screwHead.material = new THREE.MeshPhongMaterial({color: 0x999999, specular: 0x111111, shininess: 200});
+
+      const pivot = new THREE.Group()
+
+      screwHead.position.set(-19.5, 15, 1)
+      
+      // Cast a shadow
+      screwHead.receiveShadow = this.useShadows;
+      screwHead.castShadow    = false;
+
+      pivot.add(screwHead)
+      // If we want this, then we need to keep track of it so when we recreate the barrier, we can give the same angle
+      //pivot.rotation.z = -0.5 + Math.random()
+
+      // Selection properties for a screw head
+      const uisInfo = {
+        moveable:          true,
+        rotatable:         false,
+        selectable:        false,
+        selectedMaterial:  new THREE.MeshPhongMaterial({color: 0xbbbb55, specular: 0x111111, shininess: 200}),
+        onDown:            (obj, pos, info) => this.onDownScrewHead(pivot, pos, info, cornerCoords),
+        onMove:            (obj, pos, info) => this.onMoveScrewHead(pivot, pos, info, cornerCoords),
+      };
+
+      // Register the object with the UI Selection Manager
+      this.uis.registerObject(screwHead, uisInfo);
+
+      pivot.position.set(x, y, this.app.scale(edgeDepth))
+      //pivot.position.set(x, y, 100)
+
+      this.group.add(pivot)
+
+      this.screwHeads.push(pivot)
+    })
+  }
+
+  onDownScrewHead(screwHead, pos, info, cornerCoords) {
+    console.log("Down on screw head");
+  }
+
+  onMoveScrewHead(screwHead, pos, info, cornerCoords) {
+    console.log("Move on screw head");
+    const xName = cornerCoords[0] ? "x2" : "x1";
+    const yName = cornerCoords[1] ? "y2" : "y1";
+
+    // Move the screw head by the delta amount
+    this[xName] += info.deltaPos.x;
+    this[yName] += info.deltaPos.y;
+
+    this.reDraw();
   }
 
 }

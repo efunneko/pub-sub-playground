@@ -3,6 +3,7 @@ import {Body}                  from "./body";
 import {UI}                    from "./ui";
 import {World}                 from "./world.js"
 import {Messaging}             from "./messaging/messaging.js";
+import * as LZString           from "lz-string";
 
 const DEBUG_MODE = true;
 
@@ -60,13 +61,30 @@ export class App extends jst.Component {
   saveConfig() {
     let config = {};
     config.world = this.world.getConfig();
+    const json = JSON.stringify(config);
     localStorage.setItem("config", JSON.stringify(config));
+    console.log("EDE saveConfig", json.length, json);
+    const compressed = LZString.compressToEncodedURIComponent(json);
+    console.log("EDE saveConfig compressed", compressed.length, compressed);
+    console.log("URL for page:", window.location.href + "?config=" + compressed)
     this.setPendingSave(false);
   }
 
   // Load the config from local storage
   loadConfig() {
-    let config = localStorage.getItem("config");
+    // If there is a config in the URL, use that
+    const urlParams = new URLSearchParams(window.location.search);
+    let config = urlParams.get('config');
+    if (config) {
+      config = LZString.decompressFromEncodedURIComponent(config);
+      config = JSON.parse(config);
+      this.world.setConfig(config.world);
+      this.setPendingSave(false);
+      return;
+    }
+
+    // Otherwise, load from local storage
+    config = localStorage.getItem("config");
     if (config) {
       config = JSON.parse(config);
       this.world.setConfig(config.world);

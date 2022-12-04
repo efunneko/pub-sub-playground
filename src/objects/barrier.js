@@ -15,7 +15,7 @@ export class Barrier extends StaticObject {
     this.snapSize = opts.snapSize || 10;
 
     // Barriers are made up of a list of 2d points
-    this.points = opts.points || []
+    this.points = opts.points || [{x: 0, y: 0}, {x: 100, y: 0}];
 
     // Snap all points to the grid
     this.points = this.points.map(p => this.snapToGridVec2(p));
@@ -33,6 +33,9 @@ export class Barrier extends StaticObject {
     this.configParams = this.initConfigParams([
       {name: "points", type: "hidden"},
     ]);
+
+    // Sanity check to remove any duplicate points
+    this.removeDuplicatePoints();
 
     // Now create the barrier
     this.create()
@@ -240,6 +243,14 @@ export class Barrier extends StaticObject {
   }
 
   onUpScrewHead(screwHead, pos, info) {
+
+    console.log("onUpScrewHead", info, info.persistentSelected);
+    if (!info.persistentSelected) {
+      console.log("onUpScrewHead removing points", info);
+      this.removeDuplicatePoints();
+      this.recreateBarrier();
+    }
+
     this.saveableConfigChanged();
   }
 
@@ -304,6 +315,16 @@ export class Barrier extends StaticObject {
     // Need to mark the new screw head as selected
     this.uis.selectObject(obj);
     this.recreateBarrier();
+  }
+
+  removeDuplicatePoints() {
+    // Filter the points to remove any consecutive duplicates
+    this.points = this.points.filter((p, i) => {
+      if (i === 0) {
+        return true;
+      }
+      return !p.equals(this.points[i-1]);
+    });
   }
 
   snapToGrid(x, y) {

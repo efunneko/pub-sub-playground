@@ -32,17 +32,43 @@ export class Messaging {
     this.disconnect();
   }
 
-  subscribe(qos, subscription, callback) {
+  subscribe(qos, subscription) {
     console.log("added sub", subscription)
   }
 
-  getSubscription(subId) {
-    return this.subIdToSubscription[subId];
+  // Declare the set of subscriptions
+  // This function will determine the changes and subscribe/unsubscribe as needed
+  // Each entry in the array is an object with the following properties:
+  //   subscription: the subscription string
+  //   qos: the QoS level
+  setSubscriptions(subscriptions) {
+
+    // First, unsubscribe from any subscriptions that are no longer needed
+    this.subscriptions.forEach(sub => {
+      if (!subscriptions.find(s => s.subscription === sub.subscription && s.qos === sub.qos)) {
+        this.unsubscribe(sub.id); 
+      }
+    });
+
+    // Now, subscribe to any new subscriptions
+    subscriptions.forEach(sub => {
+      if (!this.subscriptions.find(s => s.subscription === sub.subscription && s.qos === sub.qos)) {
+        this.subscribe(sub.qos, sub.subscription);
+      }
+    });
+
+    console.log("setSubscriptions", subscriptions)
+    this.subscriptions = subscriptions;
+
   }
 
-  unsubscribe(subId) {
+  getSubscription(subscription) {
+    return this.subscriptions.find(s => s.subscription === subscription);
+  }
+
+  unsubscribe(subscription) {
     console.log("removed sub", subscription)
-    this._unsubscribe(this.subIdToSubscription[subId][1]);
+    this._unsubscribe(subscription);
   }
 
   publish(topic, msg, opts) {

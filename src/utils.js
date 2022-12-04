@@ -83,6 +83,38 @@ export let utils = {
     return {texture: texture, width: width, height: height};
   },
 
+  // Using FontAwesome, create a texture from a font awesome icon
+  //  Params: opts: {
+  //            icon: string,
+  //            width: number,    // optional - auto-sized if not present
+  //            height: number,   // optional - auto-sized if not present
+  //            fontSize: number,
+  //            color: string,
+  //            backgroundColor: string,
+  //            padding: number,
+  //            margin: number,
+  //            align: string,
+  //            valign: string,
+  // }
+  getFontAwesomeIconChar: (name) => {
+    var stylesheets = Array.from(document.styleSheets);
+    var rules = stylesheets.map(function(ss) {
+      return ss && ss.cssRules ? Array.from(ss.cssRules) : [];
+    })
+    rules = [].concat.apply([], rules);
+  
+    var style = rules.find(function (r) {
+      return r.selectorText && r.selectorText.endsWith(name + "::before");
+    }).style;
+    return style.content.substr(1,1);
+  },
+
+  faToTexture: (opts) => {
+    opts.text = '\uf047';
+    opts.font = '14px FontAwesome';
+    return utils.textToTexture(opts);
+  },
+
   createRoundedBoxGeometry: (width, height, depth, radius0, smoothness) => {
     let shape = new THREE.Shape();
     let eps = 0.00001;
@@ -123,6 +155,10 @@ export let utils = {
     x = xnew + cx;
     y = ynew + cy;
     return [x, y];
+  },
+
+  adjustRotationForPhysics: (angle) => {
+    return -angle
   },
 
   // Return a GUID

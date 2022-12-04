@@ -54,6 +54,8 @@ export class UI extends jst.Component {
       uiRight$c: {
         position:        "absolute",
         color:           "yellow",
+        maxHeight$vh:    100,
+        overflowY:       "auto",
         padding$px:      0,
         top$px:          0,
         right$px:        0,
@@ -90,10 +92,17 @@ export class UI extends jst.Component {
         fontSize:        "130%",
         cursor:          "pointer",
         color:           "#fff",
-        backgroundColor: "#00C895",
         opacity:         0.9,
         borderRadius$px: [0, 0, 0, 3],
         //border$px:       [1, "solid", "#880"],
+      },
+      uiFormColors$c: {
+        color:           "#fff",
+        backgroundColor: "#00C895",
+      },
+      uiFormColorsInverse$c: {
+        color:           "#00c895",
+        backgroundColor: "#fff",
       }
     };
   }
@@ -117,11 +126,19 @@ export class UI extends jst.Component {
           jst.if(this.state == "playing") && jst.$i({cn: "fas fa-pause"}) || jst.$i({cn: "fas fa-play"}),
         ),
         jst.if(this.state != "playing") && jst.$div(
-          {cn: "-uiButton", events: {click: e => this.reset()}},
+          {cn: "-uiButton", title: "Add Object", events: {click: e => this.add()}},
+          jst.$i({cn: "fas fa-plus"}),
+        ),
+        jst.if(this.state != "playing") && jst.$div(
+          {cn: "-uiButton", title: "Reset", events: {click: e => this.reset()}},
           jst.$i({cn: "fas fa-undo"}),
         ),
-        jst.if(0 &&this.pendingSave) && jst.$div(
-          {cn: "-uiButton", events: {click: e => this.save()}},
+        jst.if(this.state != "playing") && jst.$div(
+          {cn: "-uiButton", title: "Clone selected object", events: {click: e => this.clone()}},
+          jst.$i({cn: "fas fa-clone"}),
+        ),
+        jst.if(this.pendingSave) && jst.$div(
+          {cn: "-uiButton", title: "Save", events: {click: e => this.save()}},
           jst.$i({cn: "fas fa-save"}),
         )
       ),
@@ -153,7 +170,7 @@ export class UI extends jst.Component {
           jst.$i({cn: "fas fa-trash-alt"}),
         ),
       ),
-
+      this.modal
     );
   }
 
@@ -178,9 +195,38 @@ export class UI extends jst.Component {
     this.refresh();
   }
 
+  add() {
+    const obj = {
+      addType: null
+    }
+    const form = {
+      save: (data) => this.completeAddEntry(data),
+      obj: obj,
+      fields: [
+        {name: "addType", type: "buttonArray", cols: 3, value: "", label: "TODO - make some images for these", buttons: [
+          {label: "Ball", value: "ball", onClick: () => this.completeAdd({addType: "ball"})},  
+          {label: "Block", value: "block", onClick: () => this.completeAdd({addType: "block"})},
+          {label: "Barrier", value: "barrier", onClick: () => this.completeAdd({addType: "barrier"})},
+          {label: "Portal", value: "portal", onClick: () => this.completeAdd({addType: "portal"})},
+          {label: "Broker", value: "broker", onClick: () => this.completeAdd({addType: "broker"})},
+          {label: "Emitter", value: "emitter", onClick: () => this.completeAdd({addType: "emitter"})},
+          {label: "Note", value: "note", onClick: () => this.completeAdd({addType: "note"})},
+        ]}
+      ]
+    }
+    this.showModal({
+      title: "Add Object",
+      form:  form,
+    })
+  }
+
+  completeAdd(data) {
+    this.app.world.addObject(data.addType, {});
+    this.closeModal();
+  }
+
   setPendingSave(val) {
     this.pendingSave = val;
-    console.log("pendingSave", this.pendingSave);
     this.refresh();
   }
 
@@ -189,7 +235,6 @@ export class UI extends jst.Component {
   }
 
   deletePointerUp(e) {
-    console.log("deletePointerUp", e);
     this.uis.deletePointerUp(e);
   }
 
@@ -200,17 +245,16 @@ export class UI extends jst.Component {
   }
 
   generateConfigForm(formInfo) {
-    console.log("EDE generateConfigForm", formInfo);
     let div = jst.$div(
       {
-        cn: "-uiForm",
+        cn: "-uiForm " + (formInfo.inverseColors ? "-uiFormColorsInverse" : "-uiFormColors"),
         events: {
         }
       },
       formInfo.fields.map(field => {
         let inputClass = UIInputTypes.typeToClass(field.type);
         if (inputClass) {
-          field.input = new inputClass(this.app, formInfo.obj, field);
+          field.input = new inputClass(this.app, formInfo.obj, field, formInfo);
           return field.input;
         } else {
           return undefined;
@@ -219,16 +263,15 @@ export class UI extends jst.Component {
       jst.$div(
         {cn: "-uiFormFooter"},
         jst.$button(
-          {events: {click: e => this.acceptConfigForm(formInfo)}},
+          {events: {click: e => formInfo.accept ? formInfo.accept(formInfo) : this.acceptConfigForm(formInfo)}},
           "Ok"
         ),
         jst.$button(
-          {events: {click: e => this.cancelConfigForm(formInfo)}},
+          {events: {click: e => formInfo.cancel ? formInfo.cancel(formInfo) : this.cancelConfigForm(formInfo)}},
           "Cancel"
         ),
       )
     );
-    console.log("EDE generateConfigForm", div);
     return div;
   }
 
@@ -265,7 +308,6 @@ export class UI extends jst.Component {
     this.uis.setCamera(camera);
   }
   
-
   getUiSelection() {
     return this.uis;
   }
@@ -278,5 +320,164 @@ export class UI extends jst.Component {
     document.body.style.cursor = cursor || "default";
   }
 
+  showModal(opts) {
+    this.modal = new UIModal(this, opts);
+    this.refresh();
+  }
 
+  closeModal(opts) {
+    this.modal = undefined
+    this.refresh();
+  }
+
+}
+
+class UIModal extends jst.Component {
+    constructor(ui, opts) {
+      super();
+      this.ui   = ui;
+      this.opts = opts;
+      opts.form.inverseColors = true;
+      opts.form.accept = (form) => this.accept(form);
+      opts.form.cancel = (form) => this.close(form);
+      this.form = this.ui.generateConfigForm(opts.form)
+
+    }
+
+    cssLocal() {
+      return Object.assign(this.ui.cssLocal(), {
+        uiModal$c: {
+          position: "fixed",
+          zIndex: 9999,
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        },
+        uiModalContent$c: {
+          minWidth: "40%",
+          borderRadius: "5px",
+          display: "flex",
+          flexDirection: "column",
+          backgroundColor: "white",
+        },
+        uiModalHeader$c: {
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "5px",
+          borderBottom: "1px solid #ccc",
+        },
+        uiModalTitle$c: {
+          fontSize: "1.2em",
+          fontWeight: "bold",
+        },
+        uiModalClose$c: {
+          cursor: "pointer",
+        },
+        uiModalBody$c: {
+          flex: 1,
+          padding: "5px",
+        },
+        uiModalFooter$c: {
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          padding: "5px",
+          borderTop: "1px solid #ccc",
+        },
+      });
+    }
+
+    render() {
+      return jst.$div(
+        {
+          cn: "-uiModal",
+          events: {
+          },
+        },
+        jst.$div(
+          {
+            cn: "-uiModalContent",
+            events: {
+            },
+          },
+          jst.$div(
+            {
+              cn: "-uiModalHeader -uiFormColors",
+              events: {
+              },
+            },
+            jst.$div(
+              {
+                cn: "-uiModalTitle",
+                events: {
+                },
+              },
+              this.opts.title,
+            ),
+            jst.$div(
+              {
+                cn: "-uiModalClose",
+                events: {
+                  click: e => this.close(),
+                },
+              },
+              jst.$i({cn: "fas fa-times"}),
+            ),
+          ),
+          jst.$div(
+            {
+              cn: "-uiModalBody",
+              events: {
+              },
+            },
+            this.form,
+          ),
+          /*
+          jst.$div(
+            {
+              cn: "-uiModalFooter",
+              events: {
+              },
+            },
+            this.opts.buttons.map(button => {
+              return jst.$button(
+                {
+                  events: {
+                    click: e => button.click(e),
+                  },
+                },
+                button.text,
+              );
+            }),
+          ),
+          */
+        ),
+      );
+    }
+
+    close(form) {
+      this.ui.closeModal();
+    }
+
+    accept(form) {
+      let values = {};
+      form.fields.forEach(field => {
+        if (field.input) {
+          values[field.name] = field.input.getValue();
+        }
+      });
+      if (form.save) {
+        form.save(values);
+      }
+      this.ui.closeModal();
+    }
+  
 }

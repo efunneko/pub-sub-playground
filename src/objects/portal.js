@@ -23,16 +23,23 @@ export class Portal extends StaticObject {
   constructor(app, opts) {
     super(app, opts)
 
-    this.radius   = opts.radius   || defaultRadius
-    this.color    = opts.color    || defaultColor
-    this.rotation = opts.rotation || defaultRotation
-    this.enabled  = typeof opts.enabled === "undefined" ? true : opts.enabled
+    this.radius              = opts.radius   || defaultRadius
+    this.color               = opts.color    || defaultColor
+    this.rotation            = opts.rotation || defaultRotation
+    this.enabled             = typeof opts.enabled === "undefined" ? true : opts.enabled
+    this.subscriptionList    = opts.subscriptionList || ["text/one", "text/two"]
+    this.useSubscriptionList = opts.useSubscriptionList ? true : false
+    this.broker              = opts.broker   || null
+    this.portalId            = opts.portalId || "1"
+    this.name                = opts.name     || "Unnamed Portal"
 
     this.configParams = this.initConfigParams([
       {name: "name", type: "text", label: "Name"},
       {name: "portalId", type: "text", label: "Portal ID"},
       {name: "broker", type: "select", label: "Broker", options: () => this.app.getBrokers().map(b => { return {value: b.getName(), label: b.getName()}})},
       {name: "enabled", type: "boolean", label: "Enabled"},
+      {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions"},
+      {name: "subscriptionList", type: "list", entryName: "Subscription", label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker."},
       {name: "x", type: "hidden"},
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden"},      
@@ -42,6 +49,9 @@ export class Portal extends StaticObject {
     this.uis = this.app.ui.getUiSelection();
 
     this.create()
+
+    // Connect to the broker after all of the objects have been created
+    setTimeout(() => this.manageConnection(), 1000);
 
   }
 
@@ -93,8 +103,7 @@ export class Portal extends StaticObject {
     const children = [].concat(this.group.children);
     children.forEach(mesh => {
       if (mesh.userData.physicsBodies) {
-        console.log("Removing physics body", mesh.userData.physicsBodies);
-        mesh.userData.physicsBodies.forEach(body => this.app.getPhysicsEngine().removeBody(body));
+        mesh.userData.physicsBodies.forEach(body => this.physics.removeBody(body));
         mesh.userData.physicsBodies = [];
       }
       if (mesh.type !== "PointLight") {
@@ -110,29 +119,28 @@ export class Portal extends StaticObject {
   }
 
   saveConfigForm(form) {
-    // Object.keys(form).forEach(key => {
-    //   this[key] = form[key];
-    // });
     this.setValues(form)
     this.reDraw();
+    this.manageConnection();
+    this.saveableConfigChanged();
+  }
 
-    if (this.brokerConnection && !this.enabled) {
-      this.disconnect();
-    }
-    else if (!this.brokerConnection && this.enabled) {
+  manageConnection() {
+    if (this.enabled && !this.brokerConnection) {
       this.connect();
     }
-
-    //this.saveableConfigChanged();
-    
+    else if (!this.enabled && this.brokerConnection) {
+      this.disconnect();
+    }
   }
 
   // Connect to the configured Broker
   connect() {
+    console.log("EDE Connecting to broker", this.broker);
     if (this.brokerConnection || !this.broker) {
       return;
     }
-
+    console.log("EDE Connecting to broker for real", this.broker);
     const broker = this.app.getBrokerByName(this.broker);
     if (!broker) {
       console.error("No broker found with name", this.broker);
@@ -160,23 +168,127 @@ export class Portal extends StaticObject {
   onConnect(connection) {
     console.log("Connected to broker", connection);
 
+    this.connected = true;
+
     // Change the mist color to indicate that we are connected
     this.mist.material.color.setHex(0x00ff00);
     this.pointLight.intensity = 3.3;
+
+    // Subscribe to the portal topics
+    this.subscribeToPortalTopics();
+
   }
 
   // Called when the connection to the broker is lost
   onDisconnect(connection) {
     console.log("Disconnected from broker", connection);
+    this.connected = false;
   }
 
   // Called when a message is received from the broker
   onMessage(topic, message, payload) {
     console.log("Message received", topic, message, payload);
 
+    let newObj = payload;
+
+    // Set the position of the new object to be just in front of the portal
+    newObj.x = this.x + (Math.cos(this.rotation) * 10);
+    newObj.y = this.y + (Math.sin(this.rotation) * 10);
+
+    // Adjust the rotation of the new object to be the same as the portal
+    newObj.rotation = newObj.rotation + this.rotation;
+
+    // Rotate the new object's velocity to match the portal's rotation
+    const velocity = utils.rotatePoint(0, 0, newObj.velocity.x, newObj.velocity.y, this.rotation + Math.PI);
+    newObj.velocity.x = velocity[0];
+    newObj.velocity.y = velocity[1];
+    
     // Need to create the object that is coming into the world
     this.app.world.addObjectFromMessage(payload, topic);
 
+  }
+
+  // Called when an object collides with the portal
+  onCollision(body, obj) {
+
+    console.log("Collision", body, obj);
+    // If we aren't connected to the broker, don't do anything
+    if (!this.connected) {
+      return;
+    }
+
+    // If the object is still in cooldown, don't do anything
+    if (obj.isCoolingDown()) {
+      return;
+    }
+
+    // If the object is not static, then we need to send it to the broker
+    if (!obj.isStatic()) {
+      this.sendObjectToBroker(body, obj);
+      obj.destroy();
+    }
+
+  }
+
+  // Send an object to the broker
+  sendObjectToBroker(body, obj) {
+
+    console.log("Sending object to broker", obj);
+
+    // First get the full config of the object
+    const config = obj.getConfig();
+
+    // Get the objects velocity and angular velocity
+    const velocity         = body.getLinearVelocity();
+    const angularVelocity  = body.getAngularVelocity();
+
+    // Get the object's rotation in the portal's frame of reference
+    const objRotation      = obj.group.rotation.z - this.group.rotation.z;
+
+    // Rotate the velocity into the portal's frame of reference
+    const normalizedV      = utils.rotatePoint(0, 0, velocity.x, velocity.y, -this.group.rotation.z);
+          
+    // Augment the config with its normalized velocity, rotation and angular velocity
+    config.velocity        = {x: normalizedV[0], y: normalizedV[1]};
+    config.rotation        = objRotation;
+    config.angularVelocity = angularVelocity;
+    config.guid            = obj.guid;
+    config.type            = obj.constructor.name.toLowerCase();
+
+    // Create the topic
+    // If the object has a configured topic, use that, otherwise use the portal's topic
+    let topic;
+    if (obj.forceTopic && obj.topic) {
+      topic = obj.topic;
+    }
+    else {
+      const objType  = obj.constructor.name;
+      const objColor = obj.color;
+      topic = `portal/${this.name}/${this.portalId}/${objType}/${objColor}`;
+    }
+
+    // Send the message to the broker
+    this.brokerConnection.publish(topic, config);
+
+  }
+
+  // Subscribe to the portal topics
+  subscribeToPortalTopics() {
+    console.log("Subscribing to portal topics1");
+    if (!this.brokerConnection) {
+      return;
+    }
+    console.log("Subscribing to portal topics", this.portalId);
+
+    // Subscribe to the portal topics
+    if (this.useSubscriptionList) {
+      const subs = this.subscriptionList.map(sub => {return {subscription: sub, qos: 0}});
+      this.brokerConnection.setSubscriptions(subs);
+    }
+    else {
+      const subs = [{subscription: `portal/*/${this.portalId}/#`, qos: 0}];
+      this.brokerConnection.setSubscriptions(subs);
+    }
   }
 
   onDown(obj, pos, info) {
@@ -251,13 +363,13 @@ export class Portal extends StaticObject {
     this.group.add(mesh);
 
     // Get coords for the phys bodies that are rotations around this.x, -this.y
-    const [x1, y1] = utils.rotatePoint(this.x, -this.y, this.x, tr-this.y, this.adjustRotationForPhysics(this.rotation));
-    const [x2, y2] = utils.rotatePoint(this.x, -this.y, this.x, -tr-this.y, this.adjustRotationForPhysics(this.rotation));
+    const [x1, y1] = utils.rotatePoint(this.x, -this.y, this.x, tr-this.y, utils.adjustRotationForPhysics(this.rotation));
+    const [x2, y2] = utils.rotatePoint(this.x, -this.y, this.x, -tr-this.y, utils.adjustRotationForPhysics(this.rotation));
 
     // Add the physics bodies
     mesh.userData.physicsBodies = [];
-    mesh.userData.physicsBodies.push(this.app.getPhysicsEngine().createCircle(this, x1, y1, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: this.adjustRotationForPhysics(this.rotation)}));
-    mesh.userData.physicsBodies.push(this.app.getPhysicsEngine().createCircle(this, x2, y2, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: this.adjustRotationForPhysics(this.rotation)}));
+    mesh.userData.physicsBodies.push(this.physics.createCircle(this, x1, y1, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
+    mesh.userData.physicsBodies.push(this.physics.createCircle(this, x2, y2, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
     
     // Register with the selection manager
     this.uis.registerObject(mesh, uisInfo);
@@ -340,13 +452,13 @@ export class Portal extends StaticObject {
     this.group.add( mesh ); 
 
     // Get coords for the phys bodies that are rotations around this.x, -this.y
-    const [x1, y1] = utils.rotatePoint(this.x, -this.y, this.x-btl/2, tr-this.y, this.adjustRotationForPhysics(this.rotation));
-    const [x2, y2] = utils.rotatePoint(this.x, -this.y, this.x-btl/2, -tr-this.y, this.adjustRotationForPhysics(this.rotation));
+    const [x1, y1] = utils.rotatePoint(this.x, -this.y, this.x-btl/2, tr-this.y, utils.adjustRotationForPhysics(this.rotation));
+    const [x2, y2] = utils.rotatePoint(this.x, -this.y, this.x-btl/2, -tr-this.y, utils.adjustRotationForPhysics(this.rotation));
     
     // Add the physics body
     mesh.userData.physicsBodies = [];
-    mesh.userData.physicsBodies.push(this.app.getPhysicsEngine().createBox(this, x1, y1, btl, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: this.adjustRotationForPhysics(this.rotation)}));
-    mesh.userData.physicsBodies.push(this.app.getPhysicsEngine().createBox(this, x2, y2, btl, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: this.adjustRotationForPhysics(this.rotation)}));
+    mesh.userData.physicsBodies.push(this.physics.createBox(this, x1, y1, btl, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
+    mesh.userData.physicsBodies.push(this.physics.createBox(this, x2, y2, btl, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
 
     // Register with the selection manager
     this.uis.registerObject(mesh, uisInfo);
@@ -359,7 +471,9 @@ export class Portal extends StaticObject {
     const size = this.app.scale(torusRadius*2+0.2)
     const btl = this.app.scale(backTubeLength)
 
-    const geometry = new THREE.BoxGeometry(size/6, size, size);
+    //const geometry = new THREE.BoxGeometry(size/6, size, size);
+    const geometry = utils.createRoundedBoxGeometry(size/6, size, size, 3, 8);
+
 
     const material = new THREE.MeshStandardMaterial( { 
       map:          Assets.textures.woodTexture.albedo,
@@ -383,12 +497,16 @@ export class Portal extends StaticObject {
     this.group.add( mesh ); 
 
     // Get coords for the phys bodies that are rotations around this.x, -this.y
-    const [x1, y1] = utils.rotatePoint(this.x, -this.y, this.x-btl-0.25, -this.y, this.adjustRotationForPhysics(this.rotation));
+    const [x1, y1] = utils.rotatePoint(this.x, -this.y, this.x-btl-0.25, -this.y, utils.adjustRotationForPhysics(this.rotation));
 
     // Add the physics body
     mesh.userData.physicsBodies = [];
-    mesh.userData.physicsBodies.push(this.app.getPhysicsEngine().createBox(this, x1, y1, size/8, size, {isStatic: true, friction: 0.9, restitution: 0.2, angle: this.adjustRotationForPhysics(this.rotation)}));
-    
+    mesh.userData.physicsBodies.push(this.physics.createBox(this, x1, y1, size/8, size, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
+
+    // Add the body inside the tube that will be the one that objects collide with
+    const [x2, y2] = utils.rotatePoint(this.x, -this.y, this.x-btl-0.5, -this.y, utils.adjustRotationForPhysics(this.rotation));
+    mesh.userData.physicsBodies.push(this.physics.createBox(this, x2, y2, size/8, size*0.95, {onCollision: (body, obj) => this.onCollision(body, obj), isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
+
     // Register with the selection manager
     this.uis.registerObject(mesh, uisInfo);
 
@@ -494,9 +612,6 @@ export class Portal extends StaticObject {
     ]
   }
 
-  adjustRotationForPhysics(angle) {
-    return -angle
-  }
 
 
 }

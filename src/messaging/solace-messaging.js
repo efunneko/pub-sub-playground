@@ -20,6 +20,7 @@ export class SolaceMessaging extends Messaging {
       userName: this.username,
       password: this.password,
       vpnName:  this.vpnName || "default",
+      noLocal:  true,
     }
 
     const factoryProps   = new solace.SolclientFactoryProperties();
@@ -39,10 +40,13 @@ export class SolaceMessaging extends Messaging {
     this.session.on(solace.SessionEventCode.UP_NOTICE, (sessionEvent) => {
       console.log('=== Successfully connected and authorized ===');
       console.log('Session event: ' + sessionEvent.infoStr + ' raised.');
+      if (this.onConnect) {
+        this.onConnect();
+      }
       if (this.subscriptions.length) {
         this.subscriptions.forEach(sub => {
           console.log("subscribing:", sub)
-          this._subscribe(sub.sub);
+          this._subscribe(sub.subscription);
         });
       }
 
@@ -120,6 +124,7 @@ export class SolaceMessaging extends Messaging {
         subscription,
         10000
       );
+      console.log("EDE Subscribed to topic: " + subscription);
     } catch (error) {
       console.log(`Failed to subscribe to ${subscription}:`, error.toString());
     }
@@ -193,9 +198,9 @@ export class SolaceMessaging extends Messaging {
       data = null;
     }
 
-    let cbs = this.getMessageCallbacks(topic);
-
-    cbs.forEach(cb => cb(topic, msg, data));
+    if (this.onMessage) {
+      this.onMessage(topic, msg, data);
+    }
 
   }
 

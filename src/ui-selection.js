@@ -19,6 +19,7 @@
 
 import * as THREE from 'three'
 
+const defaultSelectAllowedRange = 15
 
 export class UISelection {
   constructor(app, ui, opts) {
@@ -26,7 +27,7 @@ export class UISelection {
     this.ui                 = ui;
     this.camera             = opts.camera;
     this.scene              = opts.scene;
-    this.selectAllowedRange = opts.selectAllowedRange || 5;
+    this.selectAllowedRange = opts.selectAllowedRange || defaultSelectAllowedRange;
     
     this.state = {
       selectedObject: null,
@@ -137,13 +138,6 @@ export class UISelection {
     if (obj && obj.userData && obj.userData.uisInfo) {
       const uisInfo = obj.userData.uisInfo;
 
-      // Call the onUp callback if present
-      if (uisInfo.onUp) {
-        const pos = this.getMousePosGivenZ(e, this.state.posAtMouseDown.z);
-        this.state.ctrlKey = e.ctrlKey;
-        uisInfo.onUp(obj, pos, this.state);
-      }
-
       // If the object is selectable remember that we have a persistent selection
       if (uisInfo.selectable && this.state.persistentSelectable) {
         this.selectObject(obj);
@@ -151,6 +145,13 @@ export class UISelection {
       else {
         this.state.selectedObject = null;
         this.state.persistentSelected = false;
+      }
+
+      // Call the onUp callback if present
+      if (uisInfo.onUp) {
+        const pos = this.getMousePosGivenZ(e, this.state.posAtMouseDown.z);
+        this.state.ctrlKey = e.ctrlKey;
+        uisInfo.onUp(obj, pos, this.state);
       }
 
     }
@@ -179,7 +180,7 @@ export class UISelection {
         const dx = pos.x - this.state.posAtMouseDown.x;
         const dy = pos.y - this.state.posAtMouseDown.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist > 5) {
+        if (dist > this.selectAllowedRange) {
           this.state.persistentSelectable = false;
         }
       }
