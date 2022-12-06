@@ -117,7 +117,6 @@ export class SolaceMessaging extends Messaging {
   // Bind to a Solace named queue
   // TODO - need to plumb in events for success/failure of binds
   bindToQueue(queueName) {
-    console.log("Binding to queue", queueName);
     this.messageConsumer = this.session.createMessageConsumer({
       queueDescriptor: { name: queueName, type: solace.QueueType.QUEUE },
       acknowledgeMode: solace.MessageConsumerAcknowledgeMode.CLIENT,
@@ -129,8 +128,6 @@ export class SolaceMessaging extends Messaging {
       console.log("MessageConsumer failed to connect", e);
     });
     this.messageConsumer.on(solace.MessageConsumerEventName.MESSAGE, (message) => {
-      console.log('Received message: "' + message.getBinaryAttachment() + '",' +
-          ' details:\n' + message.dump());
       // Need to explicitly ack otherwise it will not be deleted from the message router
       this.rxMessage(message.getDestination().getName(), message);
       message.acknowledge();

@@ -176,7 +176,7 @@ export class Portal extends StaticObject {
     this.connected = true;
 
     // Change the mist color to indicate that we are connected
-    this.mist.material.color.setHex(0x00ff00);
+    this.mist.material.color.setHex(0x000000);
     this.pointLight.intensity = 3.3;
 
     // Subscribe to the portal topics

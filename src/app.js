@@ -71,10 +71,7 @@ export class App extends jst.Component {
     config.world = this.world.getConfig();
     const json = JSON.stringify(config);
     localStorage.setItem("config", JSON.stringify(config));
-    console.log("EDE saveConfig", json.length, json);
     const compressed = LZString.compressToEncodedURIComponent(json);
-    console.log("EDE saveConfig compressed", compressed.length, compressed);
-    console.log("URL for page:", window.location.href + "?config=" + compressed)
     this.setPendingSave(false);
   }
 
