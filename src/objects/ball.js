@@ -14,7 +14,7 @@ export class Ball extends DynamicObject {
     super(app, opts)
 
     this.radius     = opts.radius || defaultRadius
-    this.color      = opts.color || 0xffffff
+    this.color      = opts.color || "#ffffff"
     this.forceTopic = opts.forceTopic || false
     this.topic      = opts.topic || ""
     this.label      = opts.label || ""
@@ -22,6 +22,7 @@ export class Ball extends DynamicObject {
     this.dontRender = opts.dontRender || false
     this.uis        = app.ui.getUiSelection();
 
+    console.log('Ball.constructor', this, this.x, this.y, this.color);
     this.configParams = this.initConfigParams([
       {name: "x", type: "hidden", eventLabels: ["position"]},
       {name: "y", type: "hidden", eventLabels: ["position"]},
@@ -73,7 +74,7 @@ export class Ball extends DynamicObject {
       let height, width;
       const textTexture = utils.textToTexture({
         text: this.label, 
-        font: "Monospace, Times New Roman, serif",
+        font: "Times New Roman, serif",
         width: 512, 
         height: 512,
         fontSize: maxLineLength > 3 ? 360/maxLineLength : 120,

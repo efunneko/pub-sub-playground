@@ -29,6 +29,12 @@ export class App extends jst.Component {
     this.world              = new World(this, {ui: this.ui})
 
     this.pendingSave        = false
+
+    this.eventListeners      = {
+      play: [],
+      pause: [],
+      reset: [],
+    }
     
     // Listen for window resize events
     window.onresize = e => this.resize();
@@ -55,6 +61,7 @@ export class App extends jst.Component {
 
   reset() {
     this.world.reset();
+    this.eventListeners.reset.forEach(handler => handler());
   }
   
   // Get all the config from the world and save it in local storage
@@ -103,11 +110,17 @@ export class App extends jst.Component {
   play() {
     //this.physicsEngine.play();
     this.world.play();
+    if (this.eventListeners.play) {
+      this.eventListeners.play.forEach(handler => handler());
+    }
   }
 
   pause() {
     //this.physicsEngine.pause();
     this.world.pause();
+    if (this.eventListeners.pause) {
+      this.eventListeners.pause.forEach(handler => handler());
+    }
   }
 
   setPhysicsEngine(physics) {
@@ -159,6 +172,16 @@ export class App extends jst.Component {
 
   isEditMode() {
     return this.ui.isEditMode();
+  }
+
+  addEventListener(event, handler) {
+    if (this.eventListeners[event]) {
+      this.eventListeners[event].push(handler);
+    }
+  }
+
+  getAppState() {
+    return this.ui.state
   }
 
 }

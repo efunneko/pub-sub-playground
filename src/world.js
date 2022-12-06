@@ -34,11 +34,12 @@ const ObjectTypeToClass = {
 
 export class World {
   constructor(app, opts) {
-    this.app       = app
-    this.el        = opts.el
-    this.ui        = opts.ui
-    this.doPhysics = false
-    this.objects   = []  
+    this.app              = app
+    this.el               = opts.el
+    this.ui               = opts.ui
+    this.doPhysics        = false
+    this.objects          = []  
+    this.ephemeralObjects = []  // Objects that are not saved in the world state
 
     // Stores reference counts for objects by guid
     this.objectsByGuid = {}    
@@ -184,6 +185,9 @@ export class World {
     if (!ephemeral) {
       this.objects.push({type: type, object: obj});
     }
+    else {
+      this.ephemeralObjects.push({type: type, object: obj});
+    }
 
     return obj;
   }
@@ -204,6 +208,10 @@ export class World {
     this.objectsByGuid[guid] = this.objectsByGuid[guid] ? this.objectsByGuid[guid]++ : 1;
 
     return obj;
+  }
+
+  addEphemeralObject(type, opts) {
+    return this.addObject(type, opts, undefined, true);
   }
 
   removeObject(obj) {
@@ -230,6 +238,9 @@ export class World {
 
   reset() {
     this.objects.forEach(o => {
+      this.removeObject(o.object)
+    });
+    this.ephemeralObjects.forEach(o => {
       this.removeObject(o.object)
     });
     this.app.loadConfig();

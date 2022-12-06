@@ -24,6 +24,7 @@ export class Emitter extends StaticObject {
     this.rate         = opts.rate || 1;
     this.seqNumber    = 0;
     this.uis          = app.ui.getUiSelection();
+    this.appPaused    = this.app.getAppState() == 'paused';
 
     // Create a Ball and Block to use as the default config for the emitter
     this.ballForConfig  = this.getObjForConfig(Ball, opts.ballForConfig);
@@ -39,6 +40,9 @@ export class Emitter extends StaticObject {
       {name: "ballForConfig", type: "subObject", label: "Ball Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "ball"},
       {name: "blockForConfig", type: "subObject", label: "Block Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "block"},
     ])
+
+    this.app.addEventListener('play', () => this.onAppPlay());
+    this.app.addEventListener('pause', () => this.onAppPause());
 
     this.create();
   }
@@ -366,14 +370,11 @@ export class Emitter extends StaticObject {
     if (this.shotInterval) {
       clearInterval(this.shotInterval);
       this.shotInterval = null;
-      console.log("Stopping shots");
       this.startStopButton.material.map = Assets.textures.icons.play;
     } else {
       this.shotInterval = setInterval(() => this.lightNextRib(0), 1000/this.rate);
-      console.log("Starting shots");
       this.startStopButton.material.map = Assets.textures.icons.pause;
     }
-    //this.reDraw();
   }
 
   // Fire a shot from the emitter
@@ -382,14 +383,12 @@ export class Emitter extends StaticObject {
     let [x1, y1] = utils.rotatePoint(this.x, this.y, this.x + tubeLength, this.y, this.rotation);
     let [vx, vy] = utils.rotatePoint(0, 0, baseXVelocity*this.strength, 0, this.rotation);
 
-    let opts, cls;
+    let opts;
     if (this.shotType === "ball") {
       opts = this.ballForConfig.getConfig();
-      cls  = Ball;
     }
     else if (this.shotType === "block") {
       opts = this.blockForConfig.getConfig();
-      cls  = Block;
     }
 
     const rotation  = opts.rotation || 0;
@@ -405,11 +404,14 @@ export class Emitter extends StaticObject {
 
     console.log("EDE opts", opts);
 
-    new cls(this.app, opts);
+    this.app.world.addEphemeralObject(this.shotType, opts);
 
   }
 
   lightNextRib(index) {
+    if (this.appPaused) {
+      return;
+    }
     if (index) {
       this.ribs[index-1].material.emissiveIntensity = 0;
     }
@@ -421,4 +423,13 @@ export class Emitter extends StaticObject {
       this.fireShot();
     }
   }
+
+  onAppPause() {
+    this.appPaused = true;
+  }
+
+  onAppPlay() {
+    this.appPaused = false;
+  }
+
 }

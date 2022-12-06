@@ -133,10 +133,12 @@ export class UI extends jst.Component {
           {cn: "-uiButton", title: "Reset", events: {click: e => this.reset()}},
           jst.$i({cn: "fas fa-undo"}),
         ),
+        /*
         jst.if(this.state != "playing") && jst.$div(
           {cn: "-uiButton", title: "Clone selected object", events: {click: e => this.clone()}},
           jst.$i({cn: "fas fa-clone"}),
         ),
+        */
         jst.if(this.pendingSave) && jst.$div(
           {cn: "-uiButton", title: "Save", events: {click: e => this.save()}},
           jst.$i({cn: "fas fa-save"}),
@@ -190,7 +192,6 @@ export class UI extends jst.Component {
   }
 
   save() {
-    this.state = "saving";
     this.app.saveConfig();
     this.refresh();
   }
