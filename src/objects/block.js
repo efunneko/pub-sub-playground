@@ -24,15 +24,17 @@ export class Block extends DynamicObject {
     this.uis        = app.ui.getUiSelection();
 
     this.configParams = this.initConfigParams([
-      {name: 'width',  type: 'text', label: 'Width'},
-      {name: 'height', type: 'text', label: 'Height'},
+      {name: 'width',  type: 'numberRange', min: 5, max: 80, step: 5, label: 'Width'},
+      {name: 'height', type: 'numberRange', min: 5, max: 80, step: 5, label: 'Height'},
+      {name: "rotation", type: "numberRange", min: 0, max: 3.14, step: 0.05, eventLabels: ["rotation"], label: "Rotation"},      
       // We can only enable this if we match the same shape in planck
       //{name: 'edgeRadius', type: 'text', label: 'Edge Radius'},
       {name: 'friction',  type: 'text', label: 'Friction (0-1)'},
       {name: 'color',  type: 'color', label: 'Color'},
+      {name: "forceTopic", type: "boolean", label: "Force Topic", eventLabels: ["topic"], title: "Use the configured topic when going through a portal"},
+      {name: "topic", type: "text", width: 50, label: "Topic", eventLabels: ["topic"], title: "If Force Topic is true, this topic is used when going through a portal"},
       {name: "x", type: "hidden", eventLabels: ["position"]},
       {name: "y", type: "hidden", eventLabels: ["position"]},
-      {name: "rotation", type: "hidden", eventLabels: ["rotation"]},      
     ]);
 
     this.create()

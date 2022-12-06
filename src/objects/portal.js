@@ -38,8 +38,10 @@ export class Portal extends StaticObject {
       {name: "portalId", type: "text", label: "Portal ID"},
       {name: "broker", type: "select", label: "Broker", options: () => this.app.getBrokers().map(b => { return {value: b.getName(), label: b.getName()}})},
       {name: "enabled", type: "boolean", label: "Enabled"},
+      {name: "bindToQueue", type: "boolean", label: "Bind to Queue", title: "If enabled, the portal will bind to a queue on the broker."},
+      {name: "queueName", type: "text", dependsOn: ["bindToQueue"], showIf: (obj, inputs) => inputs.bindToQueue.getValue(), label: "Queue Name", title: "If 'Bind to Queue' is true, this is the name of the queue to bind to."},
       {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions"},
-      {name: "subscriptionList", type: "list", entryName: "Subscription", label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker."},
+      {name: "subscriptionList", type: "list", entryName: "Subscription", dependsOn: ["useSubscriptionList"], showIf: (obj, inputs) => inputs.useSubscriptionList.getValue(), label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker."},
       {name: "x", type: "hidden"},
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden"},      
@@ -204,21 +206,26 @@ export class Portal extends StaticObject {
     newObj.velocity.y = velocity[1];
     
     // Need to create the object that is coming into the world
-    this.app.world.addObjectFromMessage(payload, topic);
+    let addedObj = this.app.world.addObjectFromMessage(payload, topic);
+    if (addedObj) {
+      // Remember that this object came from the portal
+      addedObj.setFromPortal(this);
+    }
 
   }
 
   // Called when an object collides with the portal
   onCollision(body, obj) {
-
-    console.log("Collision", body, obj);
+    console.log("Collision with portal");
     // If we aren't connected to the broker, don't do anything
     if (!this.connected) {
+      console.log("Not connected to broker");
       return;
     }
 
     // If the object is still in cooldown, don't do anything
-    if (obj.isCoolingDown()) {
+    if (obj.isCoolingDown() && obj.getFromPortal() === this) {
+      console.log("Object is still cooling down");
       return;
     }
 
@@ -227,13 +234,14 @@ export class Portal extends StaticObject {
       this.sendObjectToBroker(body, obj);
       obj.destroy();
     }
+    else {
+      console.log("Object is static");
+    }
 
   }
 
   // Send an object to the broker
   sendObjectToBroker(body, obj) {
-
-    console.log("Sending object to broker", obj);
 
     // First get the full config of the object
     const config = obj.getConfig();
@@ -268,6 +276,7 @@ export class Portal extends StaticObject {
     }
 
     // Send the message to the broker
+    console.log("Sending message to broker", topic, config);
     this.brokerConnection.publish(topic, config);
 
   }
@@ -418,7 +427,7 @@ export class Portal extends StaticObject {
 
   createTube(uisInfo) {
 
-    const tr = this.app.scale(torusRadius)
+    const tr = this.app.scale(torusRadius) * 0.99
     const btl = this.app.scale(backTubeLength)
     const ttr = this.app.scale(torusTubeRadius)
 
@@ -504,7 +513,7 @@ export class Portal extends StaticObject {
     mesh.userData.physicsBodies.push(this.physics.createBox(this, x1, y1, size/8, size, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
 
     // Add the body inside the tube that will be the one that objects collide with
-    const [x2, y2] = utils.rotatePoint(this.x, -this.y, this.x-btl-0.5, -this.y, utils.adjustRotationForPhysics(this.rotation));
+    const [x2, y2] = utils.rotatePoint(this.x, -this.y, this.x-btl+10, -this.y, utils.adjustRotationForPhysics(this.rotation));
     mesh.userData.physicsBodies.push(this.physics.createBox(this, x2, y2, size/8, size*0.95, {onCollision: (body, obj) => this.onCollision(body, obj), isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
 
     // Register with the selection manager

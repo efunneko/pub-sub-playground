@@ -197,7 +197,7 @@ export class World {
       return;
     }
 
-    console.log("Adding object", messagePayload, topic, guid);
+    console.log("Adding object", messagePayload, topic);
     let obj = this.addObject(messagePayload.type, messagePayload, guid, true);
     obj.topic = topic;
 

@@ -10,6 +10,7 @@ class Input extends jst.Component {
     this.app        = app;
     this.formInfo   = formInfo;
     this.opts       = opts;
+    this.type       = opts.type;
     this.label      = opts.label;
     this.name       = opts.name;
     this.title      = opts.title;
@@ -21,6 +22,9 @@ class Input extends jst.Component {
 
     if (opts.dependsOn) {
       this.dependsOn = opts.dependsOn;
+      if (!Array.isArray(this.dependsOn)) {
+        this.dependsOn = [this.dependsOn];
+      }
       this.dependsOn.forEach((dep) => {
         let field = this.formInfo.fields.find((field) => field.name === dep);
         if (field && field.input) {
@@ -35,6 +39,7 @@ class Input extends jst.Component {
     this.dependents.push(input);
   }
 
+  /*
   cssGlobal() {
     return {
       uiInput: {
@@ -53,12 +58,24 @@ class Input extends jst.Component {
       uiInput$c$focus: {
         //border$px:       [1, "solid", "blue"],
       },
-      uiInputLabel$c: {
+      uiInputLabel: {
         display:         "block",
         fontSize:        "65%",
         fontWeight:      "bold",
         whiteSpace:      "nowrap",
         padding$px:      [2,0,0,0],
+      },
+    };
+  }
+  */
+
+  cssInstance() {
+    return {
+      uiInputLabelDiv$c: {
+        marginTop$px:    this.type == "subObject" ? 15: 0,
+      },        
+      uiInputLabel$c: {
+        fontSize:        this.type == "subObject" ? "90%": "65%",
       },
     };
   }
@@ -70,7 +87,6 @@ class Input extends jst.Component {
       this.formInfo.fields.forEach((field) => {
         inputs[field.name] = field.input;
       });
-      console.log("EDE checking showif, inputs", inputs);
       if (!this.showIf(this.obj, inputs)) {
         return jst.$div();
       }
@@ -81,8 +97,8 @@ class Input extends jst.Component {
       },
       // Add a label div
       jst.$div(
-        {cn: "uiInputLabelDiv"},
-        jst.$label({cn: "uiInputLabel", title: this.title}, this.label),
+        {cn: `--uiInputLabelDiv`},
+        jst.$label({cn: "-uiInputLabel --uiInputLabel", title: this.title}, this.label),
       ),
       // Add the input
       div,
@@ -263,7 +279,7 @@ class Boolean extends Input {
   }
 
   cssInstance() {
-    return {
+    return Object.assign({}, super.cssInstance(), {
       slider$c: {
         left$px:         this.value ? (this.size-1) : 0,
       },
@@ -271,7 +287,7 @@ class Boolean extends Input {
         backgroundColor: this.value ? "#00b486" : "#aaa",
         borderColor:     this.value ? "#eee" : "gray",
       },
-    }
+    });
   }
 
   render() {
@@ -507,6 +523,10 @@ class NumberRange extends Input {
     this.step    = opts.step || 1;
     this.width   = opts.width || 200;
     this.height  = opts.height || 20;
+
+    if (typeof(this.value) == "number") {
+      this.value = Math.round(this.value*100)/100;
+    }
   }
 
   cssLocal() {
@@ -559,6 +579,47 @@ class NumberRange extends Input {
   }
 }
 
+class SubObject extends Input {
+  constructor(app, obj, opts, formInfo) {
+    super(app, obj, opts, formInfo);
+    this.app         = app;
+
+    // For this input type, the value is the sub-object
+    this.subFormInfo = {
+      save: (form) => obj.saveConfigForm(form),
+      obj: this.value,
+      fields: this.value.configParams
+    };
+
+    this.subForm = this.app.ui.generateConfigForm(this.subFormInfo, false);
+  }
+
+  cssLocal() {
+    return {
+      uiInput$c: {
+        margin$px:       [2,0,5,0],
+      },
+    };
+  }
+
+  render() {
+    return super.renderInput(jst.$div(
+      {class: "-uiInput"},
+      this.subForm
+    ));
+  }
+
+  getValue() {
+    const values = {};
+    this.subFormInfo.fields.forEach(field => {
+      if (field.input) {
+        values[field.name] = field.input.getValue();
+      }
+    });
+    return values;
+  }
+}
+
 export class UIInputTypes {
   static typeToClass(type) {
     switch(type) {
@@ -571,6 +632,7 @@ export class UIInputTypes {
       case "list": return List;
       case "buttonArray": return ButtonArray;
       case "numberRange": return NumberRange;
+      case "subObject": return SubObject;
     }
   }
 
@@ -583,6 +645,7 @@ export class UIInputTypes {
   static List           = List;
   static ButtonArray    = ButtonArray;
   static NumberRange    = NumberRange;
+  static SubObject      = SubObject;
 
   //static NumberInput  = Number;
   //static CheckboxList = CheckboxList;

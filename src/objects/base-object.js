@@ -128,7 +128,7 @@ export class BaseObject {
   }
 
   getValue(paramName) {
-    console.log(`getValue(${paramName}) = ${this[paramName]}`);
+    console.log(`getValue(${paramName}) = `, this[paramName]);
     return this[paramName];
   }
 
@@ -137,6 +137,16 @@ export class BaseObject {
     const eventLabels = {};
     Object.keys(params).forEach(paramName => {
       const value = params[paramName];
+
+      // If the param is a subObject, then set the values on the subObject
+      if (this.configParams) {
+        const param = this.configParams.find(param => param.name == paramName);
+        if (param && param.type == "subObject") {
+          this[paramName].setValues(value);
+          return;
+        }
+      }
+      
       this[paramName] = value;
       if (this.paramEventLabels[paramName]) {
         this.paramEventLabels[paramName].forEach(label => {

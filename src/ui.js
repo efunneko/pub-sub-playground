@@ -244,7 +244,7 @@ export class UI extends jst.Component {
     this.refresh();
   }
 
-  generateConfigForm(formInfo) {
+  generateConfigForm(formInfo, includeFooter = true) {
     let div = jst.$div(
       {
         cn: "-uiForm " + (formInfo.inverseColors ? "-uiFormColorsInverse" : "-uiFormColors"),
@@ -260,7 +260,7 @@ export class UI extends jst.Component {
           return undefined;
         }
       }),
-      jst.$div(
+      jst.if(includeFooter) && jst.$div(
         {cn: "-uiFormFooter"},
         jst.$button(
           {events: {click: e => formInfo.accept ? formInfo.accept(formInfo) : this.acceptConfigForm(formInfo)}},

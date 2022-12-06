@@ -2,6 +2,7 @@
 
 import * as THREE      from 'three';
 
+const seqNums = {};
 
 export let utils = {
 
@@ -28,8 +29,24 @@ export let utils = {
     opts.backgroundColor = opts.backgroundColor || 'white';
     opts.padding         = opts.padding || 0;
     opts.margin          = opts.margin || 0;
+    opts.marginTop       = opts.marginTop || opts.margin;
+    opts.marginBottom    = opts.marginBottom || opts.margin;
+    opts.marginLeft      = opts.marginLeft || opts.margin;
+    opts.marginRight     = opts.marginRight || opts.margin;
     opts.align           = opts.align || 'left';
     opts.valign          = opts.valign || 'top';
+
+    let lines  = opts.text.split(/\n|\\n/);
+
+    if (opts.valign == 'middle') {
+      if (opts.height) {
+        opts.marginTop = (opts.height - opts.fontSize*lines.length) / 2;
+        opts.marginBottom = opts.marginTop;
+      }
+      else {
+        opts.marginTop = opts.marginBottom = opts.margin;
+      }
+    }
     
     // Convert fontSize to a number if it is a string
     if (typeof opts.fontSize === 'string') {
@@ -40,7 +57,6 @@ export let utils = {
     let ctx    = canvas.getContext("2d");
     let font   = opts.fontSize + "px " + opts.font;
     ctx.font   = font;
-    let lines  = opts.text.split(/\n/);
     let width  = 0;
     let height = 0;
 
@@ -50,8 +66,8 @@ export let utils = {
       height += opts.fontSize;
     }
 
-    width  += opts.padding * 2 + opts.margin * 2;
-    height += opts.padding * 2 + opts.margin * 2 + opts.fontSize/4;
+    width  += opts.padding * 2 + opts.marginLeft + opts.marginRight;
+    height += opts.padding * 2 + opts.marginTop + opts.marginBottom + opts.fontSize/4;
 
     if (opts.width) width = opts.width;
     if (opts.height) height = opts.height;
@@ -66,8 +82,8 @@ export let utils = {
     ctx.fillRect(0, 0, width, height);
     ctx.fillStyle = opts.color;
 
-    let x = opts.padding + opts.margin;
-    let y = opts.fontSize + opts.padding + opts.margin;
+    let x = opts.padding + opts.marginLeft;
+    let y = opts.fontSize + opts.padding + opts.marginTop;
 
     // Add the text
     for (let i=0; i<lines.length; i++) {
@@ -171,6 +187,85 @@ export let utils = {
     return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
       s4() + '-' + s4() + s4() + s4();
   },
+
+  // Resolve the expression by substituting the variables and sub-expressions
+  // Sub-expressions are in the form of ${functionName(arg1, arg2, ...)}
+  // The following functions are supported:
+  //   - seqNum(name, start, step) - returns the next sequential number
+  //   - random(start, end) - returns a random number between start and end
+  //   - topicLevel(level) - returns the text at that topic level 
+  //   - now() - returns the current date/time is milliseconds since epoch
+
+  // Variables are in the form of ${varname}
+  resolveExpression: (expression, variables) => {
+    let re = /\$\{([^}]+)\}/g;
+    let match;
+    let result = expression;
+    while (match = re.exec(expression)) {
+      let expr = match[1];
+      let value = utils.resolveSubExpression(expr, variables);
+      result = result.replace(match[0], value);
+    }
+    return result;
+  },
+
+  resolveSubExpression: (expr, variables) => {
+    let re = /([^(]+)\(([^)]*)\)/;
+    let match = re.exec(expr);
+    if (match) {
+      console.log("Match: ", match)
+      let func = match[1];
+      let args = match[2].split(',').map((arg) => {return arg.trim()});
+      switch (func) {
+        case 'seqNum':
+          return utils.seqNum(args[0], args[1], args[2]);
+        case 'random':
+          return utils.random(args[0], args[1]);
+        case 'topicLevel':
+          return utils.topicLevel(args[0], variables.topic);
+        case 'now':
+          return utils.now();
+        default:
+          console.log('Unknown function: ' + func);
+          return '';
+      }
+    } else {
+      return variables[expr];
+    }
+  },
+
+  seqNum: (name, start = 1, step = 1) => {
+    console.log('seqNum: ', name, start, step, seqNums);
+    if (!seqNums[name]) {
+      seqNums[name] = utils.toInt(start, 1);
+    } else {
+      seqNums[name] += utils.toInt(step, 1);
+    }
+    return seqNums[name];
+  },
+
+  random: (start, end) => {
+    return Math.random() * (end - start) + start;
+  },
+
+  topicLevel: (level, topic) => {
+    let parts = topic.split('/');
+    return parts[level];
+  },
+
+  now: () => {
+    return Date.now();
+  },
+
+  toInt: (str, defaultVal) => {
+    let val = parseInt(str);
+    if (isNaN(val)) {
+      return defaultVal;
+    } else {
+      return val;
+    }
+  }
+
   
 
 };

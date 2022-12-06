@@ -16,16 +16,18 @@ export class Emitter extends StaticObject {
   constructor(app, opts) {
     super(app, opts);
 
+    console.log("EDE Emitter", opts)
     this.redrawOnMove = true;
     this.rotation     = opts.rotation || defaultRotation
     this.strength     = opts.strength || 1;
     this.shotType     = opts.shotType || "ball";
     this.rate         = opts.rate || 1;
+    this.seqNumber    = 0;
     this.uis          = app.ui.getUiSelection();
 
     // Create a Ball and Block to use as the default config for the emitter
-    this.ballForConfig  = this.getObjForConfig(Ball);
-    this.blockForConfig = this.getObjForConfig(Block);
+    this.ballForConfig  = this.getObjForConfig(Ball, opts.ballForConfig);
+    this.blockForConfig = this.getObjForConfig(Block, opts.blockForConfig);
 
     this.configParams = this.initConfigParams([
       {name: "x", type: "hidden"},
@@ -34,16 +36,18 @@ export class Emitter extends StaticObject {
       {name: "rate", type: "numberRange", min: 0.2, max: 8, step: 0.2, label: "Firing Rate (shots/sec)"},
       {name: "strength", type: "numberRange", min: 1, max: 5, step: 1, label: "Shot Strength"},
       {name: "shotType", type: "select", label: "Shot Type", options: [{value: "ball", label: "Ball"}, {value: "block", label: "Block"}]},
-      {name: "text", type: "text", label: "TEST", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "ball"},
       {name: "ballForConfig", type: "subObject", label: "Ball Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "ball"},
-      {name: "blockForConfig", type: "subObject", label: "Block Config", showIf: (obj, inputs) => inputs.shotType.getValue() == "block"},
+      {name: "blockForConfig", type: "subObject", label: "Block Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "block"},
     ])
 
     this.create();
   }
 
-  getObjForConfig(objClass) {
-    const obj = new objClass(this.app, {scene: this.scene});
+  getObjForConfig(objClass, opts = {}) {
+    opts.scene      = this.scene;
+    opts.dontRender = true;
+
+    const obj = new objClass(this.app, opts);
 
     // Just keep the object for config, don't add it to the world
     obj.destroy();
@@ -377,7 +381,31 @@ export class Emitter extends StaticObject {
     // Create a ball
     let [x1, y1] = utils.rotatePoint(this.x, this.y, this.x + tubeLength, this.y, this.rotation);
     let [vx, vy] = utils.rotatePoint(0, 0, baseXVelocity*this.strength, 0, this.rotation);
-    new Ball(this.app, {scene: this.scene, x: x1, y: y1, radius: 21, useShadows: this.useShadows, velocity: {x: vx, y: vy}});
+
+    let opts, cls;
+    if (this.shotType === "ball") {
+      opts = this.ballForConfig.getConfig();
+      cls  = Ball;
+    }
+    else if (this.shotType === "block") {
+      opts = this.blockForConfig.getConfig();
+      cls  = Block;
+    }
+
+    const rotation  = opts.rotation || 0;
+    console.log("EDE rotation", rotation, this.rotation);
+
+    opts.scene      = this.scene;
+    opts.rotation   = parseFloat(rotation) + this.rotation;
+    opts.x          = x1;
+    opts.y          = y1;
+    opts.velocity   = {x: vx, y: vy};
+    opts.useShadows = this.useShadows;
+    opts.label      = utils.resolveExpression(opts.label, {topic: this.topic || ""});
+
+    console.log("EDE opts", opts);
+
+    new cls(this.app, opts);
 
   }
 

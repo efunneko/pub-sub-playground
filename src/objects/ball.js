@@ -3,6 +3,7 @@
 import * as THREE             from 'three' 
 import {DynamicObject}        from './dynamic-object.js'
 import {Assets}               from '../assets.js'
+import {utils}                from '../utils.js'
 
 
 const defaultRadius        = 20
@@ -12,19 +13,28 @@ export class Ball extends DynamicObject {
   constructor(app, opts) {
     super(app, opts)
 
-    this.radius = opts.radius || defaultRadius
-    this.color  = opts.color || 0xffffff
-    this.uis    = app.ui.getUiSelection();
+    this.radius     = opts.radius || defaultRadius
+    this.color      = opts.color || 0xffffff
+    this.forceTopic = opts.forceTopic || false
+    this.topic      = opts.topic || ""
+    this.label      = opts.label || ""
+    this.labelColor = opts.labelColor || 0x000000
+    this.dontRender = opts.dontRender || false
+    this.uis        = app.ui.getUiSelection();
 
     this.configParams = this.initConfigParams([
       {name: "x", type: "hidden", eventLabels: ["position"]},
       {name: "y", type: "hidden", eventLabels: ["position"]},
       {name: "rotation", type: "hidden", eventLabels: ["rotation"]},      
-      {name: "radius", type: "text", width: 5, label: "Radius", eventLabels: ["appearance"]},
-      {name: "color", type: "color", label: "Color", eventLabels: ["appearance"]},
-      {name: "forceTopic", type: "boolean", label: "Force Topic", eventLabels: ["topic"], title: "Use the configured topic when going through a portal"},
-      {name: "topic", type: "text", width: 50, label: "Topic", eventLabels: ["topic"], title: "If Force Topic is true, this topic is used when going through a portal"},
+      {name: "radius", type: "numberRange", min: 5, max: 40, step: 1, label: "Radius", eventLabels: ["appearance"]},
+      {name: "color", type: "color", label: "Ball Color", eventLabels: ["appearance"]},
+      {name: "label", type: "text", label: "Label", eventLabels: ["appearance"]},
+      {name: "labelColor", type: "color", label: "Label Color"},
+      {name: "forceTopic", type: "boolean", label: "Force Topic", title: "Use the configured topic when going through a portal"},
+      {name: "topic", type: "text", width: 50, label: "Topic", title: "If Force Topic is true, this topic is used when going through a portal"},
     ])
+
+    if (this.dontRender) return;
 
     this.create()
 
@@ -40,22 +50,54 @@ export class Ball extends DynamicObject {
   }
 
   create() {
+    if (this.dontRender) return;
+
     super.create();
 
     console.log('Ball.create', this, this.x, this.y);
 
     // Create the geometry for the ball
-    const geometry = new THREE.SphereGeometry(this.radius, 32, 32);
+    const geometry = new THREE.SphereGeometry(this.radius, 32, 32, Math.PI/2 * 3);
+    
+    let texture;
 
-    // Create the material
+    if (this.label) {
+
+      let maxLineLength = 0;
+      const lines = this.label.split(/\n|\\n/);
+      lines.forEach(line => {
+        if (line.length > maxLineLength) maxLineLength = line.length;
+      });
+
+      // Create the material
+      let height, width;
+      const textTexture = utils.textToTexture({
+        text: this.label, 
+        font: "Monospace, Times New Roman, serif",
+        width: 512, 
+        height: 512,
+        fontSize: maxLineLength > 3 ? 360/maxLineLength : 120,
+        align: 'center',
+        valign: 'middle',
+        color: this.labelColor,
+        backgroundColor: this.color,
+      });
+
+      texture = textTexture.texture;
+
+    }
+    else {
+      texture = Assets.textures.stainlessSteelTexture.albedo;
+    }
+
     const material = new THREE.MeshStandardMaterial({
-      map:               Assets.textures.stainlessSteelTexture.albedo,
+      map:               texture,
       roughnessMap:      Assets.textures.stainlessSteelTexture.rough,
       metalness:         0.1,
       roughness:         1,
     });
 
-    if (this.color) {
+    if (this.color && !this.label) {
       // set the emissive color to the color of the ball
       material.emissive = new THREE.Color(this.color);
       material.emissiveIntensity = 0.1;

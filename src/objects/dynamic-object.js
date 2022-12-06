@@ -58,4 +58,13 @@ export class DynamicObject extends BaseObject {
     }
   }
 
+  setFromPortal(portal) {
+    this.fromPortal = portal;
+  }
+
+  getFromPortal() {
+    return this.fromPortal;
+  }
+  
+
 }
