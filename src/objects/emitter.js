@@ -99,7 +99,7 @@ export class Emitter extends StaticObject {
       map:    Assets.textures.woodTexture.albedo,
       //color:             0xaaaaaa,
       metalnessMap:      Assets.textures.greasyMetal.metallic,
-      roughnessMap:      Assets.textures.greasyMetal.roughness,
+      //roughnessMap:      Assets.textures.greasyMetal.roughness,
       normalMap:         Assets.textures.greasyMetal.normal,
       normalScale:       new THREE.Vector2(5, 5),
       metalness:         0.4,

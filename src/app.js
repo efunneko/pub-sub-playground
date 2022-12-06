@@ -146,22 +146,9 @@ export class App extends jst.Component {
     }
   }
 
-  registerBroker(broker) {
-    // Check if we already have this broker
-    if (this.brokers.indexOf(broker) == -1) {
-      this.brokers.push(broker);
-    }
-  }
-
-  unregisterBroker(broker) {
-    let index = this.brokers.indexOf(broker);
-    if (index != -1) {
-      this.brokers.splice(index, 1);
-    }
-  }
-
   getBrokerByName(name) {
-    for (let broker of this.brokers) {
+    const brokers = this.world.getBrokers();
+    for (let broker of brokers) {
       if (broker.getName() == name) {
         return broker;
       }
@@ -170,7 +157,11 @@ export class App extends jst.Component {
   }
 
   getBrokers() {
-    return this.brokers;
+    return this.world.getBrokers();
+  }
+
+  getPortalsUsingBroker(broker) {
+    return this.world.getPortalsUsingBroker(broker);
   }
 
   isEditMode() {

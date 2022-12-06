@@ -21,11 +21,13 @@ export class SolaceMessaging extends Messaging {
       password: this.password,
       vpnName:  this.vpnName || "default",
       noLocal:  true,
+      connectRetries: 2,
     }
 
     const factoryProps   = new solace.SolclientFactoryProperties();
     factoryProps.profile = solace.SolclientFactoryProfiles.version10;
     solace.SolclientFactory.init(factoryProps);
+    solace.SolclientFactory.setLogLevel(solace.LogLevel.INFO);
 
     // Connect to Solace messaging
     console.log("Connecting to Solace messaging", opts);
@@ -41,7 +43,7 @@ export class SolaceMessaging extends Messaging {
       console.log('=== Successfully connected and authorized ===');
       console.log('Session event: ' + sessionEvent.infoStr + ' raised.');
       if (this.onConnect) {
-        this.onConnect();
+        this.onConnect(this);
       }
       if (this.subscriptions.length) {
         this.subscriptions.forEach(sub => {
@@ -53,9 +55,22 @@ export class SolaceMessaging extends Messaging {
     });
 
     this.session.on(solace.SessionEventCode.CONNECT_FAILED_ERROR, (sessionEvent) => {
+      if (this.onConnectError) {
+        this.onConnectError(this, sessionEvent.infoStr);
+      }
+      
       console.log('Connection failed to the message router: ' + sessionEvent.infoStr + '; error code: ' + sessionEvent.errorCode);
+      /*
       console.log('Details: ' + sessionEvent.details);
       console.log('Description: ' + sessionEvent.description);
+      */
+    });
+    this.session.on(solace.SessionEventCode.DOWN_ERROR, (sessionEvent) => {
+      console.log('EDE Connection down error');
+      /*
+      console.log('Details: ' + sessionEvent.details);
+      console.log('Description: ' + sessionEvent.description);
+      */
     });
 
     this.session.on(solace.SessionEventCode.DISCONNECTED, (sessionEvent) => {

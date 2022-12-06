@@ -11,9 +11,10 @@ export class Messaging {
     this.password = opts.password;
     this.clientId = opts.clientId;
 
-    this.onConnect    = opts.onConnect;
-    this.onDisconnect = opts.onDisconnect;
-    this.onMessage    = opts.onMessage;
+    this.onConnect       = opts.onConnect;
+    this.onConnectError  = opts.onConnectError;
+    this.onDisconnect    = opts.onDisconnect;
+    this.onMessage       = opts.onMessage;
 
     this.subscriptions   = [];
 

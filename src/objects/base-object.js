@@ -32,6 +32,9 @@ export class BaseObject {
     // Keep the creation time
     this.creationTime = Date.now();
 
+    // Keep track if we moved the object
+    this.didMove = false;
+
   }
 
   create() {
@@ -93,7 +96,7 @@ export class BaseObject {
         });
       }
     });
-
+    console.log("paramEventLabels = ", this.paramEventLabels);
     return params;
   }
 
@@ -146,8 +149,8 @@ export class BaseObject {
           return;
         }
       }
-      
-      this[paramName] = value;
+
+      this[paramName] = value;      
       if (this.paramEventLabels[paramName]) {
         this.paramEventLabels[paramName].forEach(label => {
           eventLabels[label] = true;
@@ -157,7 +160,6 @@ export class BaseObject {
 
     // Call the event handlers
     Object.keys(eventLabels).forEach(label => {
-
       if (typeof(this[label]) === "function") {
         this[label]();
       }
@@ -175,13 +177,17 @@ export class BaseObject {
   }
 
   onUp(obj, pos, info) {
-    this.saveableConfigChanged();
+    if (this.didMove) {
+      this.saveableConfigChanged();
+      this.didMove = false;
+    }
   }
 
   onMove(obj, pos, info) {
     this.x += info.deltaPos.x;
     this.y += info.deltaPos.y;
     this.group.position.set(this.x, this.y, this.z);
+    this.didMove = true;
     if (this.redrawOnMove) {
       this.reDraw();
     }
@@ -197,10 +203,13 @@ export class BaseObject {
   }
 
   saveConfigForm(form) {
+    console.warn("saveConfigForm")
     this.setValues(form);
+    this.saveableConfigChanged();
   }
 
   saveableConfigChanged() {
+    console.warn("saveableConfigChanged")
     this.app.setPendingSave(true)
   }
 

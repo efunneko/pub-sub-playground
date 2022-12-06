@@ -6,7 +6,6 @@ import {jst}      from "jayesstee";
 class Input extends jst.Component {
   constructor(app, obj, opts, formInfo) {
     super();
-    console.log("EDE Input constructor", app, obj, opts, formInfo);
     this.app        = app;
     this.formInfo   = formInfo;
     this.opts       = opts;
@@ -146,7 +145,6 @@ class Text extends Input {
   }
 
   getValue() {
-    console.log("getValue", this.inputRef);
     return this.inputRef && this.inputRef.el ? this.inputRef.el.value : this.value;
   }
 }
@@ -225,7 +223,6 @@ class Select extends Input {
   }
 
   getValue() {
-    console.log("getValue", this.inputRef, this.value);
     return this.inputRef && this.inputRef.el ? this.inputRef.el.value : this.value;
   }
 }
@@ -310,7 +307,6 @@ class Boolean extends Input {
   }
 
   getValue() {
-    console.log("getValue", this.value);
     return this.value;
   }
 }
@@ -506,7 +502,6 @@ class List extends Input {
   }
 
   getValue(name) {
-    console.log("getValue", name, this.value);
     if (name === "newEntry") {
       return this.newEntry || "";
     }

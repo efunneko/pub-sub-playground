@@ -296,6 +296,14 @@ export class World {
     }
   }
 
+  getBrokers() {
+    return this.objects.filter(o => o.type === "broker").map(o => o.object);
+  }
+
+  getPortalsUsingBroker(broker) {
+    return this.objects.filter(o => o.type === "portal" && o.object.getValue("broker") === broker.getValue("name")).map(o => o.object);
+  }
+
   initOrientationEvents() {
 
     if (window.DeviceOrientationEvent) {

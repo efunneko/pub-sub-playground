@@ -26,17 +26,15 @@ export class Broker extends StaticObject {
     this.configParams = this.initConfigParams([
       {name: "x", type: "hidden", eventLabels: ["position"]},
       {name: "y", type: "hidden", eventLabels: ["position"]},
-      {name: "name",     type: "text",     label: "Name"},
-      {name: "protocol", type: "select",   label: "Protocol", options: [{value: "smf", label: "SMF"}, {value: "mqtt", label: "MQTT"}]},
-      {name: "url",      type: "text",     label: "Broker URL"},
-      {name: "vpnName",  type: "text",     label: "Message VPN"},
-      {name: "username", type: "text",     label: "Username"},
-      {name: "password", type: "password", label: "Password"},
+      {name: "name",     type: "text",     eventLabels: ["name"], label: "Name"},
+      {name: "protocol", type: "select",   eventLabels: ["connConfig"], label: "Protocol", options: [{value: "smf", label: "SMF"}, {value: "mqtt", label: "MQTT"}]},
+      {name: "url",      type: "text",     eventLabels: ["connConfig"], label: "Broker URL"},
+      {name: "vpnName",  type: "text",     eventLabels: ["connConfig"], label: "Message VPN"},
+      {name: "username", type: "text",     eventLabels: ["connConfig"], label: "Username"},
+      {name: "password", type: "password", eventLabels: ["connConfig"], label: "Password"},
     ])
 
     this.create();
-
-    this.app.registerBroker(this);
 
   }
 
@@ -126,6 +124,7 @@ export class Broker extends StaticObject {
     }
   }
 
+  /*
   saveConfigForm(form) {
     console.log("Saving config form", form);
     Object.keys(form).forEach((key) => {
@@ -134,6 +133,17 @@ export class Broker extends StaticObject {
     this.destroy();
     this.create();
     this.app.saveConfig();
+  }
+  */
+
+  onConnConfigChange(form) {
+    // The connection configuration has changed - tell the world so that it
+    // can update all portals that use this broker.
+    const portals = this.app.getPortalsUsingBroker(this);
+    console.log("EDE Broker.onConnConfigChange", this.name, "portals", portals);
+    portals.forEach((portal) => {
+      portal.onBrokerConnectionChanged(this);
+    });
   }
 
   getName() {

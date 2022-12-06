@@ -44,6 +44,7 @@ export class Portal extends StaticObject {
       {name: "queueName", type: "text", dependsOn: ["bindToQueue"], showIf: (obj, inputs) => inputs.bindToQueue.getValue(), label: "Queue Name", title: "If 'Bind to Queue' is true, this is the name of the queue to bind to. NOTE that binding to a named queue is only supported by Solace brokers."},
       {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions"},
       {name: "subscriptionList", type: "list", entryName: "Subscription", dependsOn: ["useSubscriptionList"], showIf: (obj, inputs) => inputs.useSubscriptionList.getValue(), label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker."},
+      {name: "lastConnectError", type: "text", label: "Last Connect Error", readonly: true},
       {name: "x", type: "hidden"},
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden"},      
@@ -129,6 +130,7 @@ export class Portal extends StaticObject {
   }
 
   manageConnection() {
+    this.setConnectEffects();
     if (this.enabled && !this.brokerConnection) {
       this.connect();
     }
@@ -150,6 +152,7 @@ export class Portal extends StaticObject {
 
     this.brokerConnection = broker.createConnection({
       onConnect: connection => this.onConnect(connection),
+      onConnectError: (connection, error) => this.onConnectError(connection, error),
       onDisconnect: connection => this.onDisconnect(connection),
       onMessage: (topic, message, payload) => this.onMessage(topic, message, payload)
     });
@@ -167,21 +170,28 @@ export class Portal extends StaticObject {
 
     this.brokerConnection.disconnect();
     this.brokerConnection = null;
+    this.connected        = false;
   }
 
   // Called when the connection to the broker is established
   onConnect(connection) {
     console.log("Connected to broker", connection);
 
-    this.connected = true;
+    this.connected        = true;
+    this.lastConnectError = "";
 
-    // Change the mist color to indicate that we are connected
-    this.mist.material.color.setHex(0x000000);
-    this.pointLight.intensity = 3.3;
+    this.setConnectEffects();
 
     // Subscribe to the portal topics
     this.subscribeToPortalTopics();
 
+  }
+
+  onConnectError(connection, error) {
+    console.log("Connection error", connection, error);
+    this.lastConnectError = error;
+    this.brokerConnection = null;
+    this.manageConnection();
   }
 
   // Called when the connection to the broker is lost
@@ -241,6 +251,11 @@ export class Portal extends StaticObject {
       console.log("Object is static");
     }
 
+  }
+
+  onBrokerConnectionChanged() {
+    this.disconnect();
+    this.manageConnection();
   }
 
   // Send an object to the broker
@@ -303,23 +318,19 @@ export class Portal extends StaticObject {
     }
   }
 
+  // Pointer events
   onDown(obj, pos, info) {
   }
-
   onUp(obj, pos, info) {
-
   }
-
   onMove(obj, pos, info) {
     this.x += info.deltaPos.x;
     this.y += info.deltaPos.y;
-
-    //this.group.position.set(pos.x, pos.y, 0);
     this.reDraw();
   }
 
   setConnectEffects() {
-    if (this.brokerConnection) {
+    if (this.brokerConnection && this.connected) {
       this.mist.material.color.setHex(openColor);
       this.pointLight.intensity = 3.3;
       this.torus.material.emmisiveIntensity = 2.0;
