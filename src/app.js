@@ -74,6 +74,9 @@ export class App extends jst.Component {
     const compressed = LZString.compressToEncodedURIComponent(json);
     const url = window.location.origin + window.location.pathname + "?config=" + compressed;
     console.log("URL: " + url);
+    if (history.pushState) {
+      history.pushState({}, null, url);
+    }
     this.setPendingSave(false);
   }
 

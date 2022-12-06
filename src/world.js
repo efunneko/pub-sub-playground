@@ -291,12 +291,35 @@ export class World {
 
   // Set the configuration for all the objects
   setConfig(config) {
-    let count = 0;
     for (let obj of config.objects) {
-      if (count++ < 20) {
-        this.addObject(obj.type, obj);
-      }
+      this.addObject(obj.type, obj);
     }
   }
+
+  initOrientationEvents() {
+
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', (event) => {
+        this.deviceOrientation = event;
+      }, false);
+    }
+      
+    // Request permission for iOS 13+ devices
+    if (DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === "function") {
+      DeviceMotionEvent.requestPermission();
+    }
+    
+    window.addEventListener("devicemotion", (e) => this.handleMotion(e));
+    //window.addEventListener("deviceorientation", (e) => this.handleOrientation(e));
+
+  }
+
+  handleOrientation(event) {
+  }
+  
+  handleMotion(event) {
+    this.gravity = event.accelerationIncludingGravity;
+  }
+  
 
 }
