@@ -26,6 +26,8 @@ export class Portal extends StaticObject {
     this.radius              = opts.radius   || defaultRadius
     this.color               = opts.color    || defaultColor
     this.rotation            = opts.rotation || defaultRotation
+    this.bindToQueue         = opts.bindToQueue ? true : false
+    this.queueName           = opts.queueName || ""
     this.enabled             = typeof opts.enabled === "undefined" ? true : opts.enabled
     this.subscriptionList    = opts.subscriptionList || ["text/one", "text/two"]
     this.useSubscriptionList = opts.useSubscriptionList ? true : false
@@ -39,7 +41,7 @@ export class Portal extends StaticObject {
       {name: "broker", type: "select", label: "Broker", options: () => this.app.getBrokers().map(b => { return {value: b.getName(), label: b.getName()}})},
       {name: "enabled", type: "boolean", label: "Enabled"},
       {name: "bindToQueue", type: "boolean", label: "Bind to Queue", title: "If enabled, the portal will bind to a queue on the broker."},
-      {name: "queueName", type: "text", dependsOn: ["bindToQueue"], showIf: (obj, inputs) => inputs.bindToQueue.getValue(), label: "Queue Name", title: "If 'Bind to Queue' is true, this is the name of the queue to bind to."},
+      {name: "queueName", type: "text", dependsOn: ["bindToQueue"], showIf: (obj, inputs) => inputs.bindToQueue.getValue(), label: "Queue Name", title: "If 'Bind to Queue' is true, this is the name of the queue to bind to. NOTE that binding to a named queue is only supported by Solace brokers."},
       {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions"},
       {name: "subscriptionList", type: "list", entryName: "Subscription", dependsOn: ["useSubscriptionList"], showIf: (obj, inputs) => inputs.useSubscriptionList.getValue(), label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker."},
       {name: "x", type: "hidden"},
@@ -79,7 +81,6 @@ export class Portal extends StaticObject {
         fields: this.configParams
       }
     }
-
 
     this.createTorus(uisInfo);
     this.createPointLight();
@@ -138,14 +139,12 @@ export class Portal extends StaticObject {
 
   // Connect to the configured Broker
   connect() {
-    console.log("EDE Connecting to broker", this.broker);
     if (this.brokerConnection || !this.broker) {
       return;
     }
-    console.log("EDE Connecting to broker for real", this.broker);
+
     const broker = this.app.getBrokerByName(this.broker);
     if (!broker) {
-      console.error("No broker found with name", this.broker);
       return;
     }
 
@@ -154,6 +153,10 @@ export class Portal extends StaticObject {
       onDisconnect: connection => this.onDisconnect(connection),
       onMessage: (topic, message, payload) => this.onMessage(topic, message, payload)
     });
+
+    if (this.bindToQueue && this.queueName) {
+      this.brokerConnection.bindToQueue(this.queueName);
+    }
   }
 
   // Disconnect from the configured Broker

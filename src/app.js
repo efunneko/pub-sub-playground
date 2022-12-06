@@ -56,6 +56,7 @@ export class App extends jst.Component {
       this.height       = window.innerHeight;
       this.body.resize(this.width, this.height);
       this.refresh();
+      this.world.resize();
     }, 100);
   }
 
