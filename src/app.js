@@ -72,6 +72,8 @@ export class App extends jst.Component {
     const json = JSON.stringify(config);
     localStorage.setItem("config", JSON.stringify(config));
     const compressed = LZString.compressToEncodedURIComponent(json);
+    const url = window.location.origin + window.location.pathname + "?config=" + compressed;
+    console.log("URL: " + url);
     this.setPendingSave(false);
   }
 

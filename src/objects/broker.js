@@ -19,6 +19,7 @@ export class Broker extends StaticObject {
     this.name   = opts.name       || '<unnamed>';
     this.url    = opts.url        || 'ws://<host>:<port>';
     this.protocol = opts.protocol || 'smf';
+    this.msgVpn   = opts.msgVpn    || 'default';
     this.username = opts.username || 'default';
     this.password = opts.password || 'default';
 
@@ -28,6 +29,7 @@ export class Broker extends StaticObject {
       {name: "name",     type: "text",     label: "Name"},
       {name: "protocol", type: "select",   label: "Protocol", options: [{value: "smf", label: "SMF"}, {value: "mqtt", label: "MQTT"}]},
       {name: "url",      type: "text",     label: "Broker URL"},
+      {name: "msgVpn", type: "text",     label: "Message VPN"},
       {name: "username", type: "text",     label: "Username"},
       {name: "password", type: "password", label: "Password"},
     ])
