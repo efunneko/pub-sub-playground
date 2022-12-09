@@ -3,13 +3,23 @@ import {Body}                  from "./body";
 import {UI}                    from "./ui";
 import {World}                 from "./world.js"
 import {Platform}              from "./platform.js"
+import {ObjectParams}          from "./objects/object-params.js"
 import * as LZString           from "lz-string";
 
 const DEBUG_MODE = true;
 
+const GLOBAL_PARAMS = [
+  {name: "quality",        type: "select",      label: "Graphics Quality", default: "medium", options: [{label: "Low", value: "low"}, {label: "Medium", value: "medium"}, {label: "High", value: "high"}]},
+  {name: "volume",         type: "numberRange", label: "Volume", default: 5, min: 1, max: 10, step: 1},
+  {name: "dynamicGravity", type: "boolean",     label: "Dynamic Gravity", title: "On mobile devices, use the device's orientation as the direction of gravity", default: true},      
+];
+
 export class App extends jst.Component {
   constructor(specs) {
     super();
+
+    // This will be initialized after the persistent data is loaded
+    this.globalParams       = null;
     
     this.title              = "Solly Goldberg";
     this.alerts             = [];
@@ -74,17 +84,31 @@ export class App extends jst.Component {
   
   // Get all the config from the world and save it in local storage
   saveConfig() {
-    let config = {};
-    config.world = this.world.getConfig();
+    let config = {
+      version:          1,
+      world:            this.world.getConfig(),
+      globalSettings:   this.globalParams.getConfig(this),
+    };
+
+    // Get the JSON string of the config
     const json = JSON.stringify(config);
+
     localStorage.setItem("config", JSON.stringify(config));
+
+    // Compress the JSON string and get a URI safe string
     const compressed = LZString.compressToEncodedURIComponent(json);
+
+    // Update the browser location with the new config
     const url = window.location.origin + window.location.pathname + "?config=" + compressed;
-    console.log("URL: " + url);
     if (history.pushState) {
       history.pushState({}, null, url);
     }
     this.setPendingSave(false);
+  }
+
+  onSettingsChange(data) {
+    this.globalParams.setValues(this, data);
+    this.setPendingSave(true);
   }
 
   // Load the config from local storage
@@ -95,18 +119,31 @@ export class App extends jst.Component {
     if (config) {
       config = LZString.decompressFromEncodedURIComponent(config);
       config = JSON.parse(config);
-      this.world.setConfig(config.world);
-      this.setPendingSave(false);
-      return;
+    }
+    else {
+      config = localStorage.getItem("config");
+      if (config) {
+        config = JSON.parse(config);
+      }  
     }
 
-    // Otherwise, load from local storage
-    config = localStorage.getItem("config");
+    let globalSettings = {};
     if (config) {
-      config = JSON.parse(config);
       this.world.setConfig(config.world);
+
+      if (config.globalSettings) {
+        globalSettings = config.globalSettings;
+      }
       this.setPendingSave(false);
     }
+
+    this.globalParams = new ObjectParams(this, GLOBAL_PARAMS, globalSettings);
+    console.log("globalParams", this.globalParams, this);
+
+  }
+
+  getGlobalParams() {
+    return this.globalParams.getParams();
   }
 
   setPendingSave(val) {
@@ -187,6 +224,11 @@ export class App extends jst.Component {
 
   getPlatform() {
     return this.platform
+  }
+
+  getValue(paramName) {
+    console.log("getValue in app", paramName, this.globalParams);
+    return this.globalParams.getValue(this, paramName);
   }
 
 }

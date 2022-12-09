@@ -30,7 +30,7 @@ export class Portal extends StaticObject {
       {name: "queueName", type: "text", dependsOn: ["bindToQueue"], showIf: (obj, inputs) => inputs.bindToQueue.getValue(), label: "Queue Name", title: "If 'Bind to Queue' is true, this is the name of the queue to bind to. NOTE that binding to a named queue is only supported by Solace brokers.", default: ""},
       {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions", default: false},
       {name: "subscriptionList", type: "list", entryName: "Subscription", dependsOn: ["useSubscriptionList"], showIf: (obj, inputs) => inputs.useSubscriptionList.getValue(), label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker.", default: []},
-      {name: "lastConnectError", type: "text", label: "Last Connect Error", readonly: true, default: ""},
+      {name: "lastConnectError", type: "textarea", width: 40, label: "Last Connect Error", readonly: true, default: ""},
       {name: "x", type: "hidden"},
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden", default: defaultRotation},
@@ -174,7 +174,9 @@ export class Portal extends StaticObject {
     console.log("Connection error", connection, error);
     this.lastConnectError = error;
     this.brokerConnection = null;
-    this.manageConnection();
+
+    // Schedule a retry in 1 second
+    setTimeout(() => this.manageConnection(), 1000);
   }
 
   // Called when the connection to the broker is lost
@@ -229,6 +231,9 @@ export class Portal extends StaticObject {
     if (!obj.isStatic()) {
       this.sendObjectToBroker(body, obj);
       obj.destroy();
+      if (obj.guid) {
+        this.app.world.removeObjectByGuid(obj.guid);
+      }
     }
     else {
       console.log("Object is static");

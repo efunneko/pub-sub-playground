@@ -19,6 +19,8 @@ class Input extends jst.Component {
     this.onBlur     = opts.onBlur;
     this.dependents = [];
 
+    console.log("EDE Input: ", this.name, opts.name, this.value, obj.getValue);
+
     if (opts.dependsOn) {
       this.dependsOn = opts.dependsOn;
       if (!Array.isArray(this.dependsOn)) {
@@ -401,7 +403,7 @@ class List extends Input {
     super(app, obj, opts, formInfo);
     this.app       = app;
     this.options   = opts.options;
-    this.value     = opts.value;
+    //this.value     = opts.value;
     this.entryName = opts.entryName;
     this.width     = opts.width || 200;
   }

@@ -46,7 +46,7 @@ export class World {
 
     // Maximum number of allowed copies of an object
     // A copy can occur when an object is received from 2 or more portals
-    this.maxCopies = 2
+    this.maxCopies = 20
 
     //this.initOrientationEvents()
     this.gravity = {x: 0, y: 0, z: 0}
@@ -176,7 +176,7 @@ export class World {
   addObjectFromMessage(messagePayload, topic) {
 
     const guid = messagePayload.guid;
-
+    console.log("new object", guid);
     // If we prevent duplicates, then check if we already have this object
     if (this.objectsByGuid[guid] && this.objectsByGuid[guid] >= this.maxCopies) {
       return;
@@ -186,9 +186,20 @@ export class World {
     let obj = this.addObject(messagePayload.type, messagePayload, guid, true);
     obj.topic = topic;
 
-    this.objectsByGuid[guid] = this.objectsByGuid[guid] ? this.objectsByGuid[guid]++ : 1;
+    console.log("by guid before", this.objectsByGuid[guid]);
 
+    this.objectsByGuid[guid] = this.objectsByGuid[guid] ? (this.objectsByGuid[guid]+1) : 1;
+    console.log("by guid", this.objectsByGuid[guid]);
     return obj;
+  }
+
+  removeObjectByGuid(guid) {
+    if (this.objectsByGuid[guid]) {
+      this.objectsByGuid[guid]--;
+      if (this.objectsByGuid[guid] <= 0) {
+        delete this.objectsByGuid[guid];
+      }
+    }
   }
 
   addEphemeralObject(type, opts) {

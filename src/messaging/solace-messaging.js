@@ -31,11 +31,13 @@ export class SolaceMessaging extends Messaging {
 
     // Connect to Solace messaging
     console.log("Connecting to Solace messaging", opts);
-    this.session = solace.SolclientFactory.createSession(opts);
     try {
+      this.session = solace.SolclientFactory.createSession(opts);
       this.session.connect();
     } catch (error) {
+      this.onConnectError(this, error.toString());
       console.log(error.toString());
+      return;
     }
 
     // Define all of our event listeners

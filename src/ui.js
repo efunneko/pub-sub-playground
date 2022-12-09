@@ -126,6 +126,10 @@ export class UI extends jst.Component {
           jst.if(this.state == "playing") && jst.$i({cn: "fas fa-pause"}) || jst.$i({cn: "fas fa-play"}),
         ),
         jst.if(this.state != "playing") && jst.$div(
+          {cn: "-uiButton", title: "Settings", events: {click: e => this.settings()}},
+          jst.$i({cn: "fas fa-cog"}),
+        ),
+        jst.if(this.state != "playing") && jst.$div(
           {cn: "-uiButton", title: "Add Object", events: {click: e => this.add()}},
           jst.$i({cn: "fas fa-plus"}),
         ),
@@ -134,7 +138,7 @@ export class UI extends jst.Component {
           jst.$i({cn: "fas fa-undo"}),
         ),
         // Temporary div to show the gravity vector
-        jst.$div(
+        jst.if(this.app.platform.isMobile) && jst.$div(
           {cn: "-uiButton", title: "Gravity"},
           this.app.world.gravity.x.toFixed(2), ", ", this.app.world.gravity.y.toFixed(2)
         ),
@@ -226,6 +230,19 @@ export class UI extends jst.Component {
     }
     this.showModal({
       title: "Add Object",
+      form:  form,
+    })
+  }
+
+  settings() {
+    const globalParams = this.app.getGlobalParams();
+    const form = {
+      save: (data) => this.app.onSettingsChange(data),
+      obj: this.app,
+      fields: globalParams
+    }
+    this.showModal({
+      title: "Settings",
       form:  form,
     })
   }
