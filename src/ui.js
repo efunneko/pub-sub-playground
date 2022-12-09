@@ -133,6 +133,11 @@ export class UI extends jst.Component {
           {cn: "-uiButton", title: "Reset", events: {click: e => this.reset()}},
           jst.$i({cn: "fas fa-undo"}),
         ),
+        // Temporary div to show the gravity vector
+        jst.$div(
+          {cn: "-uiButton", title: "Gravity"},
+          this.app.world.gravity.x.toFixed(2), ", ", this.app.world.gravity.y.toFixed(2)
+        ),
         /*
         jst.if(this.state != "playing") && jst.$div(
           {cn: "-uiButton", title: "Clone selected object", events: {click: e => this.clone()}},
@@ -177,6 +182,10 @@ export class UI extends jst.Component {
   }
 
   togglePause() {
+    if (!this.initDone) {
+      this.app.world.initOrientationEvents()
+      this.initDone = true;
+    }
     if (this.state == "playing") {
       this.state = "paused";
       this.app.pause();
@@ -278,7 +287,7 @@ export class UI extends jst.Component {
 
   clearConfigForm() {
     this.currConfigForm = undefined;
-    this.uis.unselectObject();
+    this.uis.unselectMesh();
     this.refresh();
   }
 

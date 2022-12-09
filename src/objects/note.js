@@ -9,24 +9,16 @@ import {utils}         from '../utils.js'
 
 export class Note extends StaticObject {
   constructor(app, opts) {
-    super(app, opts);
-
-    this.text     = opts.text || 'Note';
-    this.width    = opts.width;
-    this.height   = opts.height;
-    this.fontSize = opts.fontSize || 24;
-    this.color    = '#5555ff';
-
-    this.uis    = app.ui.getUiSelection();
-
-    this.configParams = this.initConfigParams([
-      {name: "text", type: "textarea", label: "Text"},
-      {name: "fontSize", type: "text", label: "Font Size"},
-      {name: "color", type: "color", label: "Color"},
+    super(app, opts, [
+      {name: "text", type: "textarea", label: "Text", default: "Note"},
+      {name: "fontSize", type: "text", label: "Font Size", default: "24"},
+      {name: "color", type: "color", label: "Color", default: "#5555ff"},
       {name: "x", type: "hidden"},
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden"},      
-    ])
+    ]);
+
+    this.uis    = app.ui.getUiSelection();
 
     this.create();
 
@@ -82,20 +74,21 @@ export class Note extends StaticObject {
     this.group.position.set(this.x, this.y, this.z);
 
     // Register with the selection manager
-    this.uis.registerObject(mesh, {
+    this.uis.registerMesh(mesh, {
       moveable: true,
       selectable: true,
       onMove: (obj, pos, info) => this.onMove(obj, pos, info),
       onDown: (obj, pos, info) => this.onDown(obj, pos, info),
       onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
       onDelete: (obj) => this.removeFromWorld(),
-      configForm: {
-        save: (form) => this.saveConfigForm(form),
-        obj: this,
-        fields: this.configParams
-      }
+      object: this,
     });
 
+  }
+
+  saveConfigForm(form) {
+    super.saveConfigForm(form);
+    this.redraw();
   }
 
   destroy() {
@@ -178,13 +171,6 @@ export class Note extends StaticObject {
     });
 
 
-
-  }
-
-  saveConfigForm(form) {
-    this.setValues(form)
-    this.reDraw();
-    this.saveableConfigChanged();
   }
       
 

@@ -583,7 +583,7 @@ class SubObject extends Input {
     this.subFormInfo = {
       save: (form) => obj.saveConfigForm(form),
       obj: this.value,
-      fields: this.value.configParams
+      fields: this.value.getObjectParams()
     };
 
     this.subForm = this.app.ui.generateConfigForm(this.subFormInfo, false);

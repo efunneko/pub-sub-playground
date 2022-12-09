@@ -11,28 +11,20 @@ const brokerHeight       = 0.4
 
 export class Broker extends StaticObject {
   constructor(app, opts) {
-    super(app, opts);
+    super(app, opts, [
+      {name: "x", type: "hidden", eventLabels: ["position"]},
+      {name: "y", type: "hidden", eventLabels: ["position"]},
+      {name: "name",     type: "text",     eventLabels: ["name"], label: "Name", default: "Broker"},
+      {name: "protocol", type: "select",   eventLabels: ["connConfig"], label: "Protocol", options: [{value: "smf", label: "SMF"}, {value: "mqtt", label: "MQTT"}], default: "smf"},
+      {name: "url",      type: "text",     eventLabels: ["connConfig"], label: "Broker URL", default: "ws://<host>:<port>"},
+      {name: "vpnName",  type: "text",     eventLabels: ["connConfig"], label: "Message VPN", default: "default"},
+      {name: "username", type: "text",     eventLabels: ["connConfig"], label: "Username", default: "default"},
+      {name: "password", type: "password", eventLabels: ["connConfig"], label: "Password", default: "default"},
+    ]);
 
     this.uis    = app.ui.getUiSelection();
 
     this.height = this.app.scale(brokerHeight)
-    this.name   = opts.name       || '<unnamed>';
-    this.url    = opts.url        || 'ws://<host>:<port>';
-    this.protocol = opts.protocol || 'smf';
-    this.vpnName  = opts.vpnName  || 'default';
-    this.username = opts.username || 'default';
-    this.password = opts.password || 'default';
-
-    this.configParams = this.initConfigParams([
-      {name: "x", type: "hidden", eventLabels: ["position"]},
-      {name: "y", type: "hidden", eventLabels: ["position"]},
-      {name: "name",     type: "text",     eventLabels: ["name"], label: "Name"},
-      {name: "protocol", type: "select",   eventLabels: ["connConfig"], label: "Protocol", options: [{value: "smf", label: "SMF"}, {value: "mqtt", label: "MQTT"}]},
-      {name: "url",      type: "text",     eventLabels: ["connConfig"], label: "Broker URL"},
-      {name: "vpnName",  type: "text",     eventLabels: ["connConfig"], label: "Message VPN"},
-      {name: "username", type: "text",     eventLabels: ["connConfig"], label: "Username"},
-      {name: "password", type: "password", eventLabels: ["connConfig"], label: "Password"},
-    ])
 
     this.create();
 
@@ -51,11 +43,7 @@ export class Broker extends StaticObject {
       onSelected: (obj)   => {this.selected = true; this.destroy(); this.create();},
       onUnselected: (obj) => {this.selected = false; this.destroy(); this.create();},
       onDelete: (obj) => this.removeFromWorld(),
-      configForm: {
-        save: (form) => this.saveConfigForm(form),
-        obj: this,
-        fields: this.configParams,
-      }
+      object: this,
     }
 
     this.createBroker(uisInfo);
@@ -82,7 +70,7 @@ export class Broker extends StaticObject {
     const material = new THREE.MeshStandardMaterial({map: texture});
     const plate = new THREE.Mesh(geometry, material);
     this.group.add(plate);
-    this.uis.registerObject(plate, uisInfo);
+    this.uis.registerMesh(plate, uisInfo);
 
     // The base
     const base = new THREE.Mesh(
@@ -101,7 +89,7 @@ export class Broker extends StaticObject {
     base.castShadow    = this.useShadows;
     base.receiveShadow = this.useShadows;
     this.group.add(base);
-    this.uis.registerObject(base, uisInfo);
+    this.uis.registerMesh(base, uisInfo);
 
   }
 

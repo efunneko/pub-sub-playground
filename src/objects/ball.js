@@ -11,29 +11,23 @@ const defaultZPosition     = 50
 
 export class Ball extends DynamicObject {
   constructor(app, opts) {
-    super(app, opts)
-
-    this.radius     = opts.radius || defaultRadius
-    this.color      = opts.color || "#ffffff"
-    this.forceTopic = opts.forceTopic || false
-    this.topic      = opts.topic || ""
-    this.label      = opts.label || ""
-    this.labelColor = opts.labelColor || 0x000000
-    this.dontRender = opts.dontRender || false
-    this.uis        = app.ui.getUiSelection();
-
-    console.log('Ball.constructor', this, this.x, this.y, this.color);
-    this.configParams = this.initConfigParams([
+    super(app, opts, [
+      // Object parameters
       {name: "x", type: "hidden", eventLabels: ["position"]},
       {name: "y", type: "hidden", eventLabels: ["position"]},
       {name: "rotation", type: "hidden", eventLabels: ["rotation"]},      
-      {name: "radius", type: "numberRange", min: 5, max: 40, step: 1, label: "Radius", eventLabels: ["appearance"]},
-      {name: "color", type: "color", label: "Ball Color", eventLabels: ["appearance"]},
+      {name: "radius", type: "numberRange", min: 5, max: 40, step: 1, label: "Radius", eventLabels: ["appearance"], default: defaultRadius},
+      {name: "color", type: "color", label: "Ball Color", eventLabels: ["appearance"], default: "#ffffff"},
       {name: "label", type: "text", label: "Label", eventLabels: ["appearance"]},
       {name: "labelColor", type: "color", label: "Label Color"},
-      {name: "forceTopic", type: "boolean", label: "Force Topic", title: "Use the configured topic when going through a portal"},
-      {name: "topic", type: "text", width: 50, label: "Topic", title: "If Force Topic is true, this topic is used when going through a portal"},
-    ])
+      {name: "forceTopic", type: "boolean", label: "Force Topic", title: "Use the configured topic when going through a portal", default: false},
+      {name: "topic", type: "text", width: 50, label: "Topic", title: "If Force Topic is true, this topic is used when going through a portal", default: ""},      
+    ]);
+
+    // dontRender is a hacky thing used when this object is treated as a sub-object of another object
+    this.dontRender = opts.dontRender || false
+
+    this.uis        = app.ui.getUiSelection();
 
     if (this.dontRender) return;
 
@@ -54,8 +48,6 @@ export class Ball extends DynamicObject {
     if (this.dontRender) return;
 
     super.create();
-
-    console.log('Ball.create', this, this.x, this.y);
 
     // Create the geometry for the ball
     const geometry = new THREE.SphereGeometry(this.radius, 32, 32, Math.PI/2 * 3);
@@ -122,18 +114,14 @@ export class Ball extends DynamicObject {
     mesh.userData.physicsBodies = [this.createPhysicsBody()];
 
     // Register with the selection manager
-    this.uis.registerObject(mesh, {
-      moveable: true,
+    this.uis.registerMesh(mesh, {
+      moveable:   true,
       selectable: true,
-      onMove:   (obj, pos, info) => this.onMove(obj, pos, info),
-      onDown:   (obj, pos, info) => this.onDown(obj, pos, info),
-      onUp:     (obj, pos, info) => this.onUp(obj, pos, info),
-      onDelete: (obj) => this.removeFromWorld(),
-      configForm: {
-        save: (form) => this.saveConfigForm(form),
-        obj: this,
-        fields: this.configParams
-      }
+      onMove:     (obj, pos, info) => this.onMove(obj, pos, info),
+      onDown:     (obj, pos, info) => this.onDown(obj, pos, info),
+      onUp:       (obj, pos, info) => this.onUp(obj, pos, info),
+      onDelete:   (obj) => this.removeFromWorld(),
+      object:     this,
     });
 
   }

@@ -30,7 +30,7 @@ export class UISelection {
     this.selectAllowedRange = opts.selectAllowedRange || defaultSelectAllowedRange;
     
     this.state = {
-      selectedObject: null,
+      selectedMesh:   null,
       isDragging:     false,
       posAtMouseDown: null,
       rotAtMouseDown: null,
@@ -46,8 +46,8 @@ export class UISelection {
     this.camera = camera;
   }
 
-  // Register an object for selection
-  registerObject(obj, opts) {
+  // Register a mesh for selection
+  registerMesh(mesh, opts) {
     let uisInfo = {
       moveable:         opts.moveable,
       rotatable:        opts.rotatable,
@@ -63,15 +63,24 @@ export class UISelection {
       onUnselected:     opts.onUnselected,
       selectedMaterial: opts.selectedMaterial,
       configForm:       opts.configForm,
+      object:           opts.object,
     };
 
-    this.setUisInfo(obj, uisInfo);
+    if (!opts.configForm && opts.object) {
+      uisInfo.configForm = {
+        save: (form) => opts.object.saveConfigForm(form),
+        obj: opts.object,
+        fields: opts.object.getObjectParams(),
+      }
+    }
+
+    this.setUisInfo(mesh, uisInfo);
 
   }
 
-  // Unregister the object
-  unregisterObject(obj) {
-    this.setUisInfo(obj, null);
+  // Unregister the mesh
+  unregisterMesh(mesh) {
+    this.setUisInfo(mesh, null);
   }
 
   // Register for specific pointer events
@@ -88,32 +97,34 @@ export class UISelection {
   // Handle the mouse down event
   onDown(e) {
 
-    // Get the object that was clicked on
-    const intersect = this.getObjectIntersectFromEvent(e);
+    this.mouseDown = true;
+
+    // Get the mesh that was clicked on
+    const intersect = this.getMeshIntersectFromEvent(e);
     if (!intersect) {
       return;
     }
 
-    const obj       = intersect.object;
+    const mesh       = intersect.object;
 
     // If there is a persistent selection, then we want to unselect it unless it was clicked on
-    if (this.state.persistentSelected && obj !== this.state.selectedObject) {
-      this.unselectObject(this.state.selectedObject);
+    if (this.state.persistentSelected && mesh !== this.state.selectedMesh) {
+      this.unselectMesh(this.state.selectedMesh);
     }
 
     // Only handle the event if the object is selectable
-    if (obj && obj.userData && obj.userData.uisInfo) {
-      const uisInfo = obj.userData.uisInfo;
+    if (mesh && mesh.userData && mesh.userData.uisInfo) {
+      const uisInfo = mesh.userData.uisInfo;
 
-      // Save the object that was clicked on
-      this.state.selectedObject = obj;
+      // Save the mesh that was clicked on
+      this.state.selectedMesh = mesh;
 
       // Mark this as persistent selectable - it will be set to false if the mouse moves too much
       this.state.persistentSelectable = uisInfo.selectable;
 
-      // Get the x,y in 3d space for the z of the object
+      // Get the x,y in 3d space for the z of the mesh
       this.state.posAtMouseDown = this.getMousePosGivenZ(e, intersect.point.z);
-      this.state.rotAtMouseDown = obj.rotation.clone();
+      this.state.rotAtMouseDown = mesh.rotation.clone();
       this.state.prevPos        = this.state.posAtMouseDown.clone();
 
       if (uisInfo.moveable) {
@@ -123,27 +134,33 @@ export class UISelection {
       // Call the onDown callback if present
       if (uisInfo.onDown) {
         this.state.ctrlKey  = e.ctrlKey;
-        uisInfo.onDown(obj, this.state.posAtMouseDown, this.state);
+        uisInfo.onDown(mesh, this.state.posAtMouseDown, this.state);
       }
     }
 
   }
 
-  // Handle the mouse up event - note that we only care about the object that was clicked on
+  // Handle the mouse up event - note that we only care about the mesh that was clicked on
   onUp(e) {
 
-    // Get the object that was clicked on
-    const obj = this.state.selectedObject;
+    if (!this.mouseDown) {
+      return;
+    }
 
-    if (obj && obj.userData && obj.userData.uisInfo) {
-      const uisInfo = obj.userData.uisInfo;
+    this.mouseDown = false;
 
-      // If the object is selectable remember that we have a persistent selection
+    // Get the mesh that was clicked on
+    const mesh = this.state.selectedMesh;
+
+    if (mesh && mesh.userData && mesh.userData.uisInfo) {
+      const uisInfo = mesh.userData.uisInfo;
+
+      // If the mesh is selectable remember that we have a persistent selection
       if (uisInfo.selectable && this.state.persistentSelectable) {
-        this.selectObject(obj);
+        this.selectMesh(mesh);
       }
       else {
-        this.state.selectedObject = null;
+        this.state.selectedMesh = null;
         this.state.persistentSelected = false;
       }
 
@@ -151,7 +168,7 @@ export class UISelection {
       if (uisInfo.onUp) {
         const pos = this.getMousePosGivenZ(e, this.state.posAtMouseDown.z);
         this.state.ctrlKey = e.ctrlKey;
-        uisInfo.onUp(obj, pos, this.state);
+        uisInfo.onUp(mesh, pos, this.state);
       }
 
     }
@@ -167,15 +184,15 @@ export class UISelection {
       return;
     }
 
-    // Get the object that was clicked on
-    const obj = this.state.selectedObject;
+    // Get the mesh that was clicked on
+    const mesh = this.state.selectedMesh;
 
-    if (obj && obj.userData && obj.userData.uisInfo) {
-      const uisInfo = obj.userData.uisInfo;
+    if (mesh && mesh.userData && mesh.userData.uisInfo) {
+      const uisInfo = mesh.userData.uisInfo;
 
       const pos = this.getMousePosGivenZ(e, this.state.posAtMouseDown.z);
 
-      // If the object is selectable, check to see if the mouse has moved too much
+      // If the mesh is selectable, check to see if the mouse has moved too much
       if (uisInfo.selectable) {
         const dx = pos.x - this.state.posAtMouseDown.x;
         const dy = pos.y - this.state.posAtMouseDown.y;
@@ -189,7 +206,7 @@ export class UISelection {
       if (uisInfo.onMove) {
         this.state.deltaPos = pos.clone().sub(this.state.prevPos);
         this.state.ctrlKey  = e.ctrlKey;
-        uisInfo.onMove(obj, pos, this.state);
+        uisInfo.onMove(mesh, pos, this.state);
         this.state.prevPos = pos;
       }
 
@@ -199,28 +216,28 @@ export class UISelection {
 
   onKeyDown(e) {
     //if (e.key === "Delete" || e.key === "Backspace") {
-    //  this.deleteSelectedObject();
+    //  this.deleteSelectedMesh();
     //}
   }
 
-  // Select an object
-  selectObject(obj) {
-    if (obj && obj.userData && obj.userData.uisInfo) {
-      const uisInfo = obj.userData.uisInfo;
+  // Select an mesh
+  selectMesh(mesh) {
+    if (mesh && mesh.userData && mesh.userData.uisInfo) {
+      const uisInfo = mesh.userData.uisInfo;
 
       // Call the onSelected callback if present
       if (uisInfo.onSelected) {
-        uisInfo.onSelected(obj);
+        uisInfo.onSelected(mesh);
       }
 
-      // Remember that this object is selected
-      this.state.selectedObject     = obj;
+      // Remember that this mesh is selected
+      this.state.selectedMesh     = mesh;
       this.state.persistentSelected = true;
 
-      // If the object has a selected material, then use it
+      // If the mesh has a selected material, then use it
       if (uisInfo.selectedMaterial) {
-        uisInfo.unselectedMaterial = obj.material;
-        obj.material               = uisInfo.selectedMaterial;
+        uisInfo.unselectedMaterial = mesh.material;
+        mesh.material               = uisInfo.selectedMaterial;
       }
 
       // If there is a config form, then show it
@@ -236,48 +253,48 @@ export class UISelection {
   }
 
 
-  // Unselect the object
-  unselectObject(obj) {
+  // Unselect the mesh
+  unselectMesh(mesh) {
 
-    if (!obj) {
-      obj = this.state.selectedObject;
+    if (!mesh) {
+      mesh = this.state.selectedMesh;
     }
 
-    if (obj && obj.userData && obj.userData.uisInfo) {
-      const uisInfo = obj.userData.uisInfo;
+    if (mesh && mesh.userData && mesh.userData.uisInfo) {
+      const uisInfo = mesh.userData.uisInfo;
 
       // Call the onUnselected callback if present
       if (uisInfo.onUnselected) {
-        uisInfo.onUnselected(obj);
+        uisInfo.onUnselected(mesh);
       }
 
       // Clear the persistent selection
       this.state.persistentSelected = false;
-      this.state.selectedObject     = null;
+      this.state.selectedMesh     = null;
 
       // If there is a config form, then hide it
       this.ui.clearConfigForm();
       
       // If there is an unselcted material, then set it
       if (uisInfo.unselectedMaterial) {
-        obj.material = uisInfo.unselectedMaterial;
+        mesh.material = uisInfo.unselectedMaterial;
       }
     }
   }
 
-  // Delete the selected object
-  deleteSelectedObject(force) {
-    console.log("deleteSelectedObject", this.state.selectedObject);
-    const obj = this.state.selectedObject;
-    if (obj && obj.userData && obj.userData.uisInfo && (this.state.persistentSelected || force)) {
-      const uisInfo = obj.userData.uisInfo;
+  // Delete the selected mesh
+  deleteSelectedMesh(force) {
+    console.log("deleteSelectedMesh", this.state.selectedMesh);
+    const mesh = this.state.selectedMesh;
+    if (mesh && mesh.userData && mesh.userData.uisInfo && (this.state.persistentSelected || force)) {
+      const uisInfo = mesh.userData.uisInfo;
 
-      this.unselectObject(obj);
+      this.unselectMesh(mesh);
 
       // Call the onDelete callback if present
       if (uisInfo.onDelete) {
         console.log("deleting");
-        uisInfo.onDelete(obj);
+        uisInfo.onDelete(mesh);
       }
     }
   }
@@ -285,15 +302,15 @@ export class UISelection {
   // Called when the pointer up event happens within the delete/trash button
   deletePointerUp(e) {
     console.log("deletePointerUp", this.state);
-    // If we are dragging an object over the delete button, then delete it
+    // If we are dragging an mesh over the delete button, then delete it
     if (this.state.isDragging) {
-      this.deleteSelectedObject(true);
+      this.deleteSelectedMesh(true);
     }
   }
 
 
-  // Given a mouse event, return the object under the mouse
-  getObjectIntersectFromEvent(e) {
+  // Given a mouse event, return the mesh under the mouse
+  getMeshIntersectFromEvent(e) {
     // Get the mouse position
     let mouse = new THREE.Vector2();
     mouse.x = (e.offsetX / e.target.clientWidth) * 2 - 1;
@@ -303,7 +320,7 @@ export class UISelection {
     let raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(mouse, this.camera);
 
-    // Get the intersected object
+    // Get the intersected mesh
     let intersects = raycaster.intersectObjects(this.scene.children, true);
     if (intersects.length > 0) {
       return intersects[0]
@@ -331,16 +348,16 @@ export class UISelection {
     return pos;
   }
 
-  getUisInfo(obj) {
-    if (obj && obj.userData && obj.userData.uisInfo) {
-      return obj.userData.uisInfo;
+  getUisInfo(mesh) {
+    if (mesh && mesh.userData && mesh.userData.uisInfo) {
+      return mesh.userData.uisInfo;
     }
     return null;
   }
 
-  setUisInfo(obj, uisInfo) {
-    if (obj && obj.userData) {
-      obj.userData.uisInfo = uisInfo;
+  setUisInfo(mesh, uisInfo) {
+    if (mesh && mesh.userData) {
+      mesh.userData.uisInfo = uisInfo;
     }
   }
 

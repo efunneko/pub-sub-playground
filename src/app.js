@@ -2,7 +2,7 @@ import {jst}                   from "jayesstee";
 import {Body}                  from "./body";
 import {UI}                    from "./ui";
 import {World}                 from "./world.js"
-import {Messaging}             from "./messaging/messaging.js";
+import {Platform}              from "./platform.js"
 import * as LZString           from "lz-string";
 
 const DEBUG_MODE = true;
@@ -22,6 +22,8 @@ export class App extends jst.Component {
  
     this.scaleFactor        = 50;
 
+    this.platform           = new Platform();
+
     this.ui                 = new UI(this, {});
 
     this.body               = new Body(this, this.width, this.height, this.fontScale);
@@ -30,8 +32,13 @@ export class App extends jst.Component {
 
     this.pendingSave        = false
 
+    // Experimental locking of orientation
+    if (this.platform.isMobile &&  screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock("landscape");
+    }
+
     this.eventListeners      = {
-      play: [],
+      play:  [],
       pause: [],
       reset: [],
     }
@@ -176,6 +183,10 @@ export class App extends jst.Component {
 
   getAppState() {
     return this.ui.state
+  }
+
+  getPlatform() {
+    return this.platform
   }
 
 }

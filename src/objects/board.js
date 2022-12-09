@@ -172,7 +172,7 @@ export class Board extends StaticObject {
       };
 
       // Register the object with the UI Selection Manager
-      this.uis.registerObject(screwHead, uisInfo);
+      this.uis.registerMesh(screwHead, uisInfo);
 
       pivot.position.set(x, y, this.app.scale(edgeDepth))
       //pivot.position.set(x, y, 100)
@@ -196,7 +196,7 @@ export class Board extends StaticObject {
     this[xName] += info.deltaPos.x;
     this[yName] += info.deltaPos.y;
 
-    this.reDraw();
+    this.redraw();
   }
 
 }

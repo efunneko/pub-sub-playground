@@ -6,8 +6,8 @@ import {BaseObject}   from './base-object.js'
 const defaultCooldown = 500;
 
 export class DynamicObject extends BaseObject {
-  constructor(app, opts) {
-    super(app, opts)
+  constructor(app, opts, params) {
+    super(app, opts, params)
 
     // All dynamic objects have a x, y and rotation
     this.x            = opts.x            || 0
@@ -65,6 +65,6 @@ export class DynamicObject extends BaseObject {
   getFromPortal() {
     return this.fromPortal;
   }
-  
+
 
 }

@@ -14,14 +14,18 @@ const baseXVelocity   = 10;
 
 export class Emitter extends StaticObject {
   constructor(app, opts) {
-    super(app, opts);
+    super(app, opts, [
+      {name: "x", type: "hidden"},
+      {name: "y", type: "hidden"},
+      {name: "rotation", type: "hidden", default: defaultRotation},
+      {name: "rate", type: "numberRange", min: 0.2, max: 8, step: 0.2, label: "Firing Rate (shots/sec)", default: 1},
+      {name: "strength", type: "numberRange", min: 1, max: 5, step: 1, label: "Shot Strength", default: 1},
+      {name: "shotType", type: "select", label: "Shot Type", options: [{value: "ball", label: "Ball"}, {value: "block", label: "Block"}], default: "ball"},
+      {name: "ballForConfig", type: "subObject", label: "Ball Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "ball"},
+      {name: "blockForConfig", type: "subObject", label: "Block Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "block"},
+    ]);
 
-    console.log("EDE Emitter", opts)
     this.redrawOnMove = true;
-    this.rotation     = opts.rotation || defaultRotation
-    this.strength     = opts.strength || 1;
-    this.shotType     = opts.shotType || "ball";
-    this.rate         = opts.rate || 1;
     this.seqNumber    = 0;
     this.uis          = app.ui.getUiSelection();
     this.appPaused    = this.app.getAppState() == 'paused';
@@ -30,19 +34,10 @@ export class Emitter extends StaticObject {
     this.ballForConfig  = this.getObjForConfig(Ball, opts.ballForConfig);
     this.blockForConfig = this.getObjForConfig(Block, opts.blockForConfig);
 
-    this.configParams = this.initConfigParams([
-      {name: "x", type: "hidden"},
-      {name: "y", type: "hidden"},
-      {name: "rotation", type: "hidden"},
-      {name: "rate", type: "numberRange", min: 0.2, max: 8, step: 0.2, label: "Firing Rate (shots/sec)"},
-      {name: "strength", type: "numberRange", min: 1, max: 5, step: 1, label: "Shot Strength"},
-      {name: "shotType", type: "select", label: "Shot Type", options: [{value: "ball", label: "Ball"}, {value: "block", label: "Block"}]},
-      {name: "ballForConfig", type: "subObject", label: "Ball Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "ball"},
-      {name: "blockForConfig", type: "subObject", label: "Block Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "block"},
-    ])
-
     this.app.addEventListener('play', () => this.onAppPlay());
     this.app.addEventListener('pause', () => this.onAppPause());
+
+    console.log("Emitter: ", this);
 
     this.create();
   }
@@ -50,12 +45,8 @@ export class Emitter extends StaticObject {
   getObjForConfig(objClass, opts = {}) {
     opts.scene      = this.scene;
     opts.dontRender = true;
-
-    const obj = new objClass(this.app, opts);
-
-    // Just keep the object for config, don't add it to the world
+    const obj       = new objClass(this.app, opts);
     obj.destroy();
-
     return obj;
   }
 
@@ -68,14 +59,10 @@ export class Emitter extends StaticObject {
       onMove: (obj, pos, info) => this.onMove(obj, pos, info),
       onDown: (obj, pos, info) => this.onDown(obj, pos, info),
       onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
-      onSelected: (obj)   => {this.selected = true; this.reDraw();},
-      onUnselected: (obj) => {this.selected = false; this.reDraw()},
+      onSelected: (obj)   => {this.selected = true; this.redraw();},
+      onUnselected: (obj) => {this.selected = false; this.redraw()},
       onDelete: (obj) => this.removeFromWorld(),
-      configForm: {
-        save: (form) => this.saveConfigForm(form),
-        obj: this,
-        fields: this.configParams
-      }
+      object: this,
     }
 
     this.createFiringTube(uisInfo);
@@ -161,7 +148,7 @@ export class Emitter extends StaticObject {
       mainTube.userData.physicsBodies.push(this.physics.createCircle(this, x1, y1, ribRadius, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
   
       this.group.add(rib);
-      this.uis.registerObject(rib, uisInfo);
+      this.uis.registerMesh(rib, uisInfo);
       this.ribs.push(rib);
     }
 
@@ -170,7 +157,7 @@ export class Emitter extends StaticObject {
 
     // Add the mesh to the group
     this.group.add(mainTube);
-    this.uis.registerObject(mainTube, uisInfo);
+    this.uis.registerMesh(mainTube, uisInfo);
 
   }
 
@@ -203,7 +190,7 @@ export class Emitter extends StaticObject {
     mesh.receiveShadow = this.useShadows;
 
     this.group.add( mesh ); 
-    this.uis.registerObject(mesh, uisInfo);
+    this.uis.registerMesh(mesh, uisInfo);
 
 
     // Get coords for the phys bodies that are rotations around this.x, -this.y
@@ -261,7 +248,7 @@ export class Emitter extends StaticObject {
     icon.position.set(opts.x, opts.y, opts.z);
     icon.castShadow    = this.useShadows;
     icon.receiveShadow = this.useShadows;
-    this.uis.registerObject(icon, uisInfo);
+    this.uis.registerMesh(icon, uisInfo);
 
     // Add the mesh to the group
     this.group.add(icon);
@@ -312,7 +299,7 @@ export class Emitter extends StaticObject {
       };
 
       // Register the object with the UI Selection Manager
-      this.uis.registerObject(screwHead, uisInfo);
+      this.uis.registerMesh(screwHead, uisInfo);
 
       pivot.position.set(-tubeLength/4, sign*screwOffset, 45)
 
@@ -356,8 +343,8 @@ export class Emitter extends StaticObject {
     // Set the rotation of the portal to the angle mod 2PI
     this.rotation = angle % (Math.PI*2)
 
-    // Redraw the portal
-    this.reDraw()
+    // redraw the portal
+    this.redraw()
 
     //console.log("onMoveScrewHead", screwHead, pos, info)
   }

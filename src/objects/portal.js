@@ -21,34 +21,23 @@ const closedColor          = 0xffffff
 
 export class Portal extends StaticObject {
   constructor(app, opts) {
-    super(app, opts)
-
-    this.radius              = opts.radius   || defaultRadius
-    this.color               = opts.color    || defaultColor
-    this.rotation            = opts.rotation || defaultRotation
-    this.bindToQueue         = opts.bindToQueue ? true : false
-    this.queueName           = opts.queueName || ""
-    this.enabled             = typeof opts.enabled === "undefined" ? true : opts.enabled
-    this.subscriptionList    = opts.subscriptionList || ["text/one", "text/two"]
-    this.useSubscriptionList = opts.useSubscriptionList ? true : false
-    this.broker              = opts.broker   || null
-    this.portalId            = opts.portalId || "1"
-    this.name                = opts.name     || "Unnamed Portal"
-
-    this.configParams = this.initConfigParams([
-      {name: "name", type: "text", label: "Name"},
-      {name: "portalId", type: "text", label: "Portal ID"},
+    super(app, opts, [
+      {name: "name", type: "text", label: "Name", default: "Unnamed Portal"},
+      {name: "portalId", type: "text", label: "Portal ID", default: "1"},
       {name: "broker", type: "select", label: "Broker", options: () => this.app.getBrokers().map(b => { return {value: b.getName(), label: b.getName()}})},
-      {name: "enabled", type: "boolean", label: "Enabled"},
-      {name: "bindToQueue", type: "boolean", label: "Bind to Queue", title: "If enabled, the portal will bind to a queue on the broker."},
-      {name: "queueName", type: "text", dependsOn: ["bindToQueue"], showIf: (obj, inputs) => inputs.bindToQueue.getValue(), label: "Queue Name", title: "If 'Bind to Queue' is true, this is the name of the queue to bind to. NOTE that binding to a named queue is only supported by Solace brokers."},
-      {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions"},
-      {name: "subscriptionList", type: "list", entryName: "Subscription", dependsOn: ["useSubscriptionList"], showIf: (obj, inputs) => inputs.useSubscriptionList.getValue(), label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker."},
-      {name: "lastConnectError", type: "text", label: "Last Connect Error", readonly: true},
+      {name: "enabled", type: "boolean", label: "Enabled", default: true},
+      {name: "bindToQueue", type: "boolean", label: "Bind to Queue", title: "If enabled, the portal will bind to a queue on the broker.", default: false},
+      {name: "queueName", type: "text", dependsOn: ["bindToQueue"], showIf: (obj, inputs) => inputs.bindToQueue.getValue(), label: "Queue Name", title: "If 'Bind to Queue' is true, this is the name of the queue to bind to. NOTE that binding to a named queue is only supported by Solace brokers.", default: ""},
+      {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions", default: false},
+      {name: "subscriptionList", type: "list", entryName: "Subscription", dependsOn: ["useSubscriptionList"], showIf: (obj, inputs) => inputs.useSubscriptionList.getValue(), label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker.", default: []},
+      {name: "lastConnectError", type: "text", label: "Last Connect Error", readonly: true, default: ""},
       {name: "x", type: "hidden"},
       {name: "y", type: "hidden"},
-      {name: "rotation", type: "hidden"},      
+      {name: "rotation", type: "hidden", default: defaultRotation},
     ])
+ 
+    this.radius              = opts.radius   || defaultRadius
+    this.color               = opts.color    || defaultColor
 
     // Get the UI Selection Manager
     this.uis = this.app.ui.getUiSelection();
@@ -73,14 +62,10 @@ export class Portal extends StaticObject {
       onMove: (obj, pos, info) => this.onMove(obj, pos, info),
       onDown: (obj, pos, info) => this.onDown(obj, pos, info),
       onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
-      onSelected: (obj)   => {this.selected = true; this.reDraw();},
-      onUnselected: (obj) => {this.selected = false; this.reDraw()},
+      onSelected: (obj)   => {this.selected = true; this.redraw();},
+      onUnselected: (obj) => {this.selected = false; this.redraw()},
       onDelete: (obj) => this.removeFromWorld(),
-      configForm: {
-        save: (form) => this.saveConfigForm(form),
-        obj: this,
-        fields: this.configParams
-      }
+      object: this,
     }
 
     this.createTorus(uisInfo);
@@ -117,16 +102,14 @@ export class Portal extends StaticObject {
     
   }
 
-  reDraw() {
+  redraw() {
     this.destroyPortal();
     this.createPortal();
   }
 
   saveConfigForm(form) {
-    this.setValues(form)
-    this.reDraw();
+    super.saveConfigForm(form);
     this.manageConnection();
-    this.saveableConfigChanged();
   }
 
   manageConnection() {
@@ -326,7 +309,7 @@ export class Portal extends StaticObject {
   onMove(obj, pos, info) {
     this.x += info.deltaPos.x;
     this.y += info.deltaPos.y;
-    this.reDraw();
+    this.redraw();
   }
 
   setConnectEffects() {
@@ -395,7 +378,7 @@ export class Portal extends StaticObject {
     mesh.userData.physicsBodies.push(this.physics.createCircle(this, x2, y2, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
     
     // Register with the selection manager
-    this.uis.registerObject(mesh, uisInfo);
+    this.uis.registerMesh(mesh, uisInfo);
 
     this.torus = mesh;
 
@@ -435,7 +418,7 @@ export class Portal extends StaticObject {
     this.mist = mesh;
 
     // Register with the selection manager
-    this.uis.registerObject(mesh, uisInfo);
+    this.uis.registerMesh(mesh, uisInfo);
 
   }
 
@@ -484,7 +467,7 @@ export class Portal extends StaticObject {
     mesh.userData.physicsBodies.push(this.physics.createBox(this, x2, y2, btl, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
 
     // Register with the selection manager
-    this.uis.registerObject(mesh, uisInfo);
+    this.uis.registerMesh(mesh, uisInfo);
 
   }
 
@@ -531,7 +514,7 @@ export class Portal extends StaticObject {
     mesh.userData.physicsBodies.push(this.physics.createBox(this, x2, y2, size/8, size*0.95, {onCollision: (body, obj) => this.onCollision(body, obj), isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
 
     // Register with the selection manager
-    this.uis.registerObject(mesh, uisInfo);
+    this.uis.registerMesh(mesh, uisInfo);
 
   }
 
@@ -578,7 +561,7 @@ export class Portal extends StaticObject {
       };
 
       // Register the object with the UI Selection Manager
-      this.uis.registerObject(screwHead, uisInfo, btl, size, tr);
+      this.uis.registerMesh(screwHead, uisInfo, btl, size, tr);
 
       pivot.position.set(-btl-0.25, sign*tr - sign*tr/8, size - size/25)
 
@@ -622,19 +605,11 @@ export class Portal extends StaticObject {
     // Set the rotation of the portal to the angle mod 2PI
     this.rotation = angle % (Math.PI*2)
 
-    // Redraw the portal
-    this.reDraw()
+    // redraw the portal
+    this.redraw()
 
     //console.log("onMoveScrewHead", screwHead, pos, info)
   }
-
-  renderConfigForm() {
-    return [
-      new UIInputTypes.Text({label: "Name", value: this.name}),
-      new UIInputTypes.Text({label: "Portal ID", value: this.portalId}),
-    ]
-  }
-
 
 
 }

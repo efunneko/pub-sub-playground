@@ -27,5 +27,10 @@ export class PhysicsWorld {
     World.remove(this.world, body);
   }
 
+  setGravity(x, y) {
+    this.world.gravity.x = x;
+    this.world.gravity.y = y;
+  }
+
 
 }

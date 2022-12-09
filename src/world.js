@@ -48,6 +48,9 @@ export class World {
     // A copy can occur when an object is received from 2 or more portals
     this.maxCopies = 2
 
+    //this.initOrientationEvents()
+    this.gravity = {x: 0, y: 0, z: 0}
+
     this.create()
   }
 
@@ -116,41 +119,6 @@ export class World {
     this.board = new Board(this.app, {scene: this.scene, x1: -500, y1: -300, x2: 500, y2: 300, useShadows: useShadows});
     this.animate()
 
-    /*
-    // Temp create a ball
-    this.addObject("ball", {x: -300, y: 250, radius: 20});
-    this.addObject("ball", {x: -200, y: 180, radius: 21});
-    this.addObject("block",  {x: 50, y: 230, rotation: 0, angle: 0});
-    this.addObject("block",  {x: 0, y: 230, rotation: 0, angle: 0});
-    this.addObject("block",  {x: -50, y: 230, rotation: 0, angle: 0});
-    this.addObject("block",  {x: -100, y: 230, rotation: 0, angle: 0});
-    this.addObject("note",   {x: 0, y: 0, rotation: 0, angle: 0, text: "Hello World\nIt is great to see you!"});
-    this.addObject("broker", {x: 0, y: -300});
-
-    this.addObject("barrier", {
-      points: [
-        new THREE.Vector2(-400, 200),
-        new THREE.Vector2(100, 180),
-        new THREE.Vector2(400, 75),
-      ], 
-    });
-
-    this.addObject("barrier", {
-      points: [
-        new THREE.Vector2(480, 10),
-        new THREE.Vector2(-200, -100),
-        new THREE.Vector2(-400, -150),
-        new THREE.Vector2(480, -150),
-        new THREE.Vector2(480, 10),
-      ], 
-    });
-
-    // Temp create a portal
-    this.addObject("portal", {x: -200, y: 0, radius: 0.5, color: 0x0000ff, rotation: 0});
-    this.addObject("portal", {x:  400, y: 0, radius: 0.5, color: 0xffab00, rotation: Math.PI});
-    this.addObject("portal", {x:  500, y: -400, radius: 0.5, color: 0x00ffff, rotation: Math.PI});
-
-    */
     // Set the camera and scene in the UI
     this.ui.setCamera(this.camera)
     this.ui.setScene(this.scene)
@@ -166,6 +134,13 @@ export class World {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize( window.innerWidth, window.innerHeight );
+    
+    if (window.matchMedia("(orientation: portrait)").matches) {
+      this.camera.rotation.z = Math.PI/2;
+    } 
+    else if (window.matchMedia("(orientation: landscape)").matches) {
+      this.camera.rotation.z = 0;
+    }    
   }
 
   addObject(type, opts, guid, ephemeral) {
@@ -306,27 +281,38 @@ export class World {
 
   initOrientationEvents() {
 
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', (event) => {
-        this.deviceOrientation = event;
-      }, false);
-    }
+    if (this.isMobile) {     
+      // Request permission for iOS 13+ devices
+      if (DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === "function") {
+        DeviceMotionEvent.requestPermission();
+      }
+
+      if (DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function") {
+        DeviceOrientationEvent.requestPermission();
+      }
       
-    // Request permission for iOS 13+ devices
-    if (DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === "function") {
-      DeviceMotionEvent.requestPermission();
+      window.addEventListener("devicemotion", (e) => this.handleMotion(e));
+      window.addEventListener("deviceorientation", (e) => this.handleOrientation(e));
     }
-    
-    window.addEventListener("devicemotion", (e) => this.handleMotion(e));
-    //window.addEventListener("deviceorientation", (e) => this.handleOrientation(e));
 
   }
 
   handleOrientation(event) {
+
+    // Convert the alpha, beta, gamma values to an x,y gravity vector
+    const alpha = event.alpha;
+    const beta  = event.beta;
+    const gamma = event.gamma;
+
+    const y = Math.sin(alpha * Math.PI / 180) * Math.cos(beta * Math.PI / 180);
+    const x = -Math.sin(beta * Math.PI / 180);
+
   }
   
   handleMotion(event) {
     this.gravity = event.accelerationIncludingGravity;
+    this.physics.setGravity(this.gravity.y, this.gravity.x);
+    this.app.ui.refresh();
   }
   
 

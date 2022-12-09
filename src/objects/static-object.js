@@ -3,8 +3,8 @@
 import {BaseObject}  from './base-object.js'
 
 export class StaticObject extends BaseObject {
-  constructor(app, opts) {
-    super(app, opts)
+  constructor(app, opts, params) {
+    super(app, opts, params)
 
     this.x       = opts.x || 0
     this.y       = opts.y || 0

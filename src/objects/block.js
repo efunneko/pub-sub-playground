@@ -13,29 +13,21 @@ const defaultZPosition     = 40
 
 export class Block extends DynamicObject {
   constructor(app, opts) {
-    super(app, opts)
-
-    this.width      = opts.width  || defaultWidth
-    this.height     = opts.height || defaultHeight
-    this.depth      = opts.depth  || defaultDepth
-    this.color      = opts.color  || "#f0e6d6"
-    this.edgeRadius = opts.edgeRadius || 3
-    this.friction   = opts.friction || 0.2
-    this.uis        = app.ui.getUiSelection();
-
-    this.configParams = this.initConfigParams([
-      {name: 'width',  type: 'numberRange', min: 5, max: 80, step: 5, label: 'Width'},
-      {name: 'height', type: 'numberRange', min: 5, max: 80, step: 5, label: 'Height'},
-      {name: "rotation", type: "numberRange", min: 0, max: 3.14, step: 0.05, eventLabels: ["rotation"], label: "Rotation"},      
-      // We can only enable this if we match the same shape in planck
-      //{name: 'edgeRadius', type: 'text', label: 'Edge Radius'},
-      {name: 'friction',  type: 'text', label: 'Friction (0-1)'},
-      {name: 'color',  type: 'color', label: 'Color'},
-      {name: "forceTopic", type: "boolean", label: "Force Topic", eventLabels: ["topic"], title: "Use the configured topic when going through a portal"},
-      {name: "topic", type: "text", width: 50, label: "Topic", eventLabels: ["topic"], title: "If Force Topic is true, this topic is used when going through a portal"},
+    super(app, opts, [
+      {name: 'width',  type: 'numberRange', min: 5, max: 80, step: 5, label: 'Width', default: defaultWidth},
+      {name: 'height', type: 'numberRange', min: 5, max: 80, step: 5, label: 'Height', default: defaultHeight},
+      {name: "rotation", type: "numberRange", min: 0, max: 3.14, step: 0.05, eventLabels: ["rotation"], label: "Rotation", default: 0},
+      {name: 'friction',  type: 'text', label: 'Friction (0-1)', default: 0.2},
+      {name: 'color',  type: 'color', label: 'Color', default: '#f0e6d6'},
+      {name: "forceTopic", type: "boolean", label: "Force Topic", eventLabels: ["topic"], title: "Use the configured topic when going through a portal", default: false},
+      {name: "topic", type: "text", width: 50, label: "Topic", eventLabels: ["topic"], title: "If Force Topic is true, this topic is used when going through a portal", default: ""},
       {name: "x", type: "hidden", eventLabels: ["position"]},
       {name: "y", type: "hidden", eventLabels: ["position"]},
-    ]);
+    ])
+
+    this.depth      = defaultDepth;
+    this.edgeRadius = 3;
+    this.uis        = app.ui.getUiSelection();
 
     this.create()
 
@@ -82,7 +74,7 @@ export class Block extends DynamicObject {
     this.createPhysicsBody();
 
     // Register with the selection manager
-    this.uis.registerObject(this.mesh, {
+    this.uis.registerMesh(this.mesh, {
       moveable: true,
       selectable: true,
       //selectedMaterial: new THREE.MeshStandardMaterial({color: 0x00ff00}),
@@ -92,11 +84,7 @@ export class Block extends DynamicObject {
       onSelected: (obj) => obj.material = new THREE.MeshStandardMaterial({color: 0xf0e686, emissive: 0x333308}),
       onUnselected: (obj) => obj.material = new THREE.MeshStandardMaterial({color: 0xf0e6d6, emissive: 0x000000}),
       onDelete: (obj) => this.removeFromWorld(),
-      configForm: {
-        save: (form) => this.saveConfigForm(form),
-        obj: this,
-        fields: this.configParams
-      }
+      object:   this,
     });
 
   }
@@ -127,10 +115,4 @@ export class Block extends DynamicObject {
     this.saveableConfigChanged();
   }
 
-  saveConfigForm(form) {
-    this.setValues(form);
-    this.destroy();
-    this.create();
-    this.saveableConfigChanged();
-  }
 }

@@ -3,13 +3,17 @@
 // This class (along with specialization in sub-classes) will handle both the interaction with the physics engine
 // and the 3D rendering engine
 
-import * as THREE from 'three';
+import {ObjectParams}     from './object-params.js'
+import * as THREE         from 'three';
 
 
 export class BaseObject {
-  constructor(app, opts) {
+  constructor(app, opts, params) {
     this.app  = app
     this.opts = Object.assign({}, opts)
+
+    // The object parameters
+    this.objectParams = new ObjectParams(this, params, opts);
 
     // Threejs scene for 3d rendering
     this.scene  = opts.scene;
@@ -22,9 +26,6 @@ export class BaseObject {
 
     // Create a group to hold all the sub-meshes
     this.group = new THREE.Group();
-
-    // Our config parameters
-    this.configParams = null;
 
     // Keep list of event handlers for parameter type changes
     this.paramEventLabels = {};
@@ -100,73 +101,21 @@ export class BaseObject {
     return params;
   }
 
-  resetConfig() {
-    this.configParams.forEach(param => {
-      if (Array.isArray(this[param.name])) {
-        this[param.name] = param.initialValue.slice(0);
-      }
-      else if (typeof this[param.name] === "object") {
-        this[param.name] = Object.assign({}, param.initialValue);
-      }
-      else {
-        this[param.name] = param.initialValue;
-      }
-    });
-    this.reDraw();
-  } 
+  getObjectParams() {
+    return this.objectParams.getParams();
+  }
 
   getConfig() {
-    if (this.configParams) {
-      const config = {};
-      this.configParams.forEach(param => {
-        if (param.type == "subObject") {
-          config[param.name] = this[param.name].getConfig();
-        }
-        else {
-          config[param.name] = this[param.name];
-        }
-      });
-      return config;
-    }
+    return this.objectParams.getConfig(this);
   }
 
   getValue(paramName) {
     console.log(`getValue(${paramName}) = `, this[paramName]);
-    return this[paramName];
+    return this.objectParams.getValue(this, paramName);
   }
 
   setValues(params) {
-
-    const eventLabels = {};
-    Object.keys(params).forEach(paramName => {
-      const value = params[paramName];
-
-      // If the param is a subObject, then set the values on the subObject
-      if (this.configParams) {
-        const param = this.configParams.find(param => param.name == paramName);
-        if (param && param.type == "subObject") {
-          this[paramName].setValues(value);
-          return;
-        }
-      }
-
-      this[paramName] = value;      
-      if (this.paramEventLabels[paramName]) {
-        this.paramEventLabels[paramName].forEach(label => {
-          eventLabels[label] = true;
-        });
-      }
-    });
-
-    // Call the event handlers
-    Object.keys(eventLabels).forEach(label => {
-      if (typeof(this[label]) === "function") {
-        this[label]();
-      }
-    });
-
-    // TBD - should we force a redraw here?
-    // this.reDraw();
+    this.objectParams.setValues(this, params);
   }
 
   static loadAssets() {
@@ -189,15 +138,15 @@ export class BaseObject {
     this.group.position.set(this.x, this.y, this.z);
     this.didMove = true;
     if (this.redrawOnMove) {
-      this.reDraw();
+      this.redraw();
     }
   }
 
   onAppearanceChange() {
-    this.reDraw();
+    this.redraw();
   }
 
-  reDraw() {
+  redraw() {
     this.destroy();
     this.create();
   }

@@ -9,7 +9,9 @@ const defaultBarrierDepth  = 100;
 
 export class Barrier extends StaticObject {
   constructor(app, opts) {
-    super(app, opts)
+    super(app, opts, [
+      {name: "points", type: "hidden"},
+    ])
 
     // The snap grid size
     this.snapSize = opts.snapSize || 10;
@@ -29,14 +31,10 @@ export class Barrier extends StaticObject {
     // Set to true if a new barrier is being created during a drag
     this.creatingBarrier = false;
 
-    // All the persistent parameters for the barrier
-    this.configParams = this.initConfigParams([
-      {name: "points", type: "hidden"},
-    ]);
-
     // Sanity check to remove any duplicate points
     this.removeDuplicatePoints();
 
+    console.log("EDE Barrier: ", this.points);
     // Now create the barrier
     this.create()
 
@@ -119,7 +117,7 @@ export class Barrier extends StaticObject {
       mesh.userData.physicsBody = this.app.getPhysicsEngine().createBox(this, center.x, -center.y, length, defaultBarrierWidth, {isStatic: true, angle: -angle, friction: 0.9, restitution: 0.2});
 
       // Register the object with the UI Selection Manager
-      this.uis.registerObject(mesh, uisInfo);
+      this.uis.registerMesh(mesh, uisInfo);
 
       // Draw a cylinder on each point
       this.createCylinder(p1, material, uisInfo);
@@ -160,7 +158,7 @@ export class Barrier extends StaticObject {
     mesh.userData.type        = "barrier";
 
     // Register the object with the UI Selection Manager
-    this.uis.registerObject(mesh, uisInfo);
+    this.uis.registerMesh(mesh, uisInfo);
 
   }
 
@@ -199,7 +197,7 @@ export class Barrier extends StaticObject {
     };
 
     // Register the object with the UI Selection Manager
-    this.uis.registerObject(screwHead, uisInfo);
+    this.uis.registerMesh(screwHead, uisInfo);
 
     // Return the screw head
     return pivot
@@ -293,7 +291,6 @@ export class Barrier extends StaticObject {
   }    
 
   onUpBarrier(obj, pos, info) {
-    console.log("onUpBarrier");
     this.saveableConfigChanged();
   }
 
@@ -313,7 +310,7 @@ export class Barrier extends StaticObject {
     }
 
     // Need to mark the new screw head as selected
-    this.uis.selectObject(obj);
+    this.uis.selectMesh(obj);
     this.recreateBarrier();
   }
 
