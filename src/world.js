@@ -176,20 +176,15 @@ export class World {
   addObjectFromMessage(messagePayload, topic) {
 
     const guid = messagePayload.guid;
-    console.log("new object", guid);
     // If we prevent duplicates, then check if we already have this object
     if (this.objectsByGuid[guid] && this.objectsByGuid[guid] >= this.maxCopies) {
       return;
     }
 
-    console.log("Adding object", messagePayload, topic);
     let obj = this.addObject(messagePayload.type, messagePayload, guid, true);
     obj.topic = topic;
 
-    console.log("by guid before", this.objectsByGuid[guid]);
-
     this.objectsByGuid[guid] = this.objectsByGuid[guid] ? (this.objectsByGuid[guid]+1) : 1;
-    console.log("by guid", this.objectsByGuid[guid]);
     return obj;
   }
 
