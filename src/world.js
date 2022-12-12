@@ -179,6 +179,16 @@ export class World {
     return obj;
   }
 
+  cloneObject(obj, ephemeral) {
+    // Get the config for this object
+    let config = obj.getBeforeMoveConfig();
+    
+    // Create a new object with the same config
+    let newObj = this.addObject(config.type, config, null, ephemeral);
+    console.log("EDE Cloned object", config, newObj);
+    return newObj;
+  }
+
   addObjectFromMessage(messagePayload, topic) {
 
     const guid = messagePayload.guid;

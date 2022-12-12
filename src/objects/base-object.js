@@ -12,6 +12,9 @@ export class BaseObject {
     this.app  = app
     this.opts = Object.assign({}, opts)
 
+    // Get the type of the object - lowercase version of the class
+    this.type = this.constructor.name.toLowerCase();
+
     // The object parameters
     this.objectParams = new ObjectParams(this, params, opts);
 
@@ -106,7 +109,16 @@ export class BaseObject {
   }
 
   getConfig() {
-    return this.objectParams.getConfig(this);
+    const config = this.objectParams.getConfig(this);
+    config.type  = this.type;
+    return config;
+  }
+
+  getBeforeMoveConfig() {
+    let config = this.getConfig();
+    config.x = this.startMoveX;
+    config.y = this.startMoveY;
+    return config;
   }
 
   getValue(paramName) {
@@ -123,6 +135,8 @@ export class BaseObject {
   }
 
   onDown(obj, pos, info) {
+    this.startMoveX = this.x;
+    this.startMoveY = this.y;    
   }
 
   onUp(obj, pos, info) {
@@ -130,6 +144,8 @@ export class BaseObject {
       this.saveableConfigChanged();
       this.didMove = false;
     }
+    this.duplicate         = null;
+    this.creatingDuplicate = false;
   }
 
   onMove(obj, pos, info) {
@@ -137,6 +153,22 @@ export class BaseObject {
     this.y += info.deltaPos.y;
     this.group.position.set(this.x, this.y, this.z);
     this.didMove = true;
+
+    console.log("EDE onMove", info.ctrlKey, this.x, this.y, this.z);
+    if (info.ctrlKey && !this.creatingDuplicate) {
+      this.creatingDuplicate = true;
+      this.duplicate = this.app.world.cloneObject(this);
+      console.log("EDE created dup", this.duplicate);
+    }
+
+    // If we are creating a duplicate, but the CTRL key is no longer down, then stop creating the duplicate
+    else if (!info.ctrlKey && this.creatingDuplicate) {
+      this.creatingDuplicate = false;
+      this.app.world.removeObject(this.duplicate);
+      this.duplicate = null;
+    }
+
+
     if (this.redrawOnMove) {
       this.redraw();
     }

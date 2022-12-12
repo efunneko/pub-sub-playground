@@ -258,7 +258,7 @@ export class UI extends jst.Component {
   }
 
   deleteClicked(e) {
-    this.uis.deleteSelectedObject();
+    this.uis.deleteSelectedMesh();
   }
 
   deletePointerUp(e) {

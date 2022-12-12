@@ -35,7 +35,9 @@ export class Portal extends StaticObject {
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden", default: defaultRotation},
     ])
- 
+
+    this.redrawOnMove        = true;
+
     this.radius              = opts.radius   || defaultRadius
     this.color               = opts.color    || defaultColor
 
@@ -69,11 +71,14 @@ export class Portal extends StaticObject {
     }
 
     this.createTorus(uisInfo);
-    this.createPointLight();
     this.createMist(uisInfo);
     this.createTube(uisInfo);
     this.createBack(uisInfo);
     this.createScrewHeads();
+
+    if (this.app.quality === "high") {
+      this.createPointLight();
+    }
 
     this.setConnectEffects();
     
@@ -307,26 +312,30 @@ export class Portal extends StaticObject {
   }
 
   // Pointer events
+  /*
   onDown(obj, pos, info) {
   }
   onUp(obj, pos, info) {
   }
   onMove(obj, pos, info) {
-    this.x += info.deltaPos.x;
-    this.y += info.deltaPos.y;
-    this.redraw();
+    super.onMove(obj, pos, info);
   }
+  */
 
   setConnectEffects() {
     if (this.brokerConnection && this.connected) {
       this.mist.material.color.setHex(openColor);
-      this.pointLight.intensity = 3.3;
       this.torus.material.emmisiveIntensity = 2.0;
+      if (this.pointLight) {
+        this.pointLight.intensity = 3.3;
+      }
     }
     else {
       this.mist.material.color.setHex(closedColor);
-      this.pointLight.intensity = 0.4;
       this.torus.material.emmisiveIntensity = 0.0;
+      if (this.pointLight) {
+        this.pointLight.intensity = 0.4;
+      }
     }
   }
 
