@@ -27,7 +27,7 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
   init() {
     this.world = planck.World({
       gravity: planck.Vec2(0, this.scale(-500)),
-      allowSleep: false
+      allowSleep: this.app.platform.isMobile && this.app.dynamicGravity ? true : false
     });
 
     // Get collision events

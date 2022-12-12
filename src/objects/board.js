@@ -12,13 +12,13 @@ const edgeDepth            = 2
 export class Board extends StaticObject {
 
   constructor(app, opts) {
-    super(app, opts)
-
-    // Dimensions of board are given with two corners
-    this.x1       = opts.x1;
-    this.y1       = opts.y1;
-    this.x2       = opts.x2;
-    this.y2       = opts.y2;
+    super(app, opts, [
+      // Object parameters
+      {name: "x1", type: "hidden", eventLabels: ["position"]},
+      {name: "y1", type: "hidden", eventLabels: ["position"]},
+      {name: "x2", type: "hidden", eventLabels: ["position"]},
+      {name: "y2", type: "hidden", eventLabels: ["position"]},
+    ]);
 
     // The board never rotates
     this.rotation = 0;
@@ -196,6 +196,7 @@ export class Board extends StaticObject {
     this[xName] += info.deltaPos.x;
     this[yName] += info.deltaPos.y;
 
+    this.saveableConfigChanged();
     this.redraw();
   }
 

@@ -18,7 +18,6 @@ import {UI}                 from './ui.js';
 import {utils}              from './utils.js';
 
 
-const useShadows = true;
 const usePlanck  = true;
 
 const ObjectTypeToClass = {
@@ -46,10 +45,19 @@ export class World {
 
     // Maximum number of allowed copies of an object
     // A copy can occur when an object is received from 2 or more portals
-    this.maxCopies = 20
+    this.maxCopies = this.app.maxCopies
 
     //this.initOrientationEvents()
     this.gravity = {x: 0, y: 0, z: 0}
+
+    console.log("EDE this.app.quality: " + this.app.quality)
+
+    if (this.app.quality !== 'low') {
+      this.useShadows = true
+    }
+    else {
+      this.useShadows = false
+    }
 
     this.create()
   }
@@ -74,7 +82,7 @@ export class World {
     this.camera            = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 0.1, 2000 )
     this.camera.position.z = 1300
 
-    this.renderer = new THREE.WebGLRenderer({antialias: false})
+    this.renderer = new THREE.WebGLRenderer({antialias: this.app.quality == 'high'})
     //    this.renderer.setPixelRatio( window.devicePixelRatio * 0.8 )
     this.renderer.setSize( window.innerWidth, window.innerHeight )
 
@@ -87,16 +95,16 @@ export class World {
     this.scene.add(new THREE.AmbientLight(0xffffff,0.40));
 
     // Optionally enable shadows
-    if (useShadows) {
+    if (this.useShadows) {
       this.renderer.shadowMap.enabled           = true;
       this.renderer.shadowMap.type              = THREE.PCFSoftShadowMap;
       this.renderer.shadowMap.renderSingleSided = true
       dirLight.castShadow                       = true;
-      if (0) {
+      if (this.app.quality === 'high') {
         dirLight.shadow.mapSize.width             = 1024
         dirLight.shadow.mapSize.height            = 1024
       }
-      else {
+      else if (this.app.quality === 'medium') {
         dirLight.shadow.mapSize.width             = 512
         dirLight.shadow.mapSize.height            = 512
       }
@@ -115,8 +123,6 @@ export class World {
       }
     }
          
-    // Also create the board
-    this.board = new Board(this.app, {scene: this.scene, x1: -500, y1: -300, x2: 500, y2: 300, useShadows: useShadows});
     this.animate()
 
     // Set the camera and scene in the UI
@@ -126,7 +132,7 @@ export class World {
     // Finally, add the pointer events
     this.ui.addPointerEvents(this.renderer.domElement);
 
-    this.app.loadConfig();
+    this.app.applyConfig();
 
   }
 
@@ -157,7 +163,7 @@ export class World {
     }
     
     opts.scene = this.scene;
-    opts.useShadows = useShadows;
+    opts.useShadows = this.useShadows;
 
     let obj = new cls(this.app, opts);
     obj.guid = guid;
@@ -272,9 +278,20 @@ export class World {
 
   // Set the configuration for all the objects
   setConfig(config) {
-    for (let obj of config.objects) {
+
+    let foundBoard = false;
+    config.objects.forEach(obj => {
       this.addObject(obj.type, obj);
+      if (obj.type === "board") {
+        foundBoard = true;
+      }
+    })
+    
+    if (!foundBoard) {
+      console.log("EDE - found no board, adding default")
+      this.addObject("board", {x1: -500, y1: -300, x2: 500, y2: 300});
     }
+
   }
 
   getBrokers() {

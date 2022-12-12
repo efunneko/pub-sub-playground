@@ -12,6 +12,7 @@ const GLOBAL_PARAMS = [
   {name: "quality",        type: "select",      label: "Graphics Quality", default: "medium", options: [{label: "Low", value: "low"}, {label: "Medium", value: "medium"}, {label: "High", value: "high"}]},
   {name: "volume",         type: "numberRange", label: "Volume", default: 5, min: 1, max: 10, step: 1},
   {name: "dynamicGravity", type: "boolean",     label: "Dynamic Gravity", title: "On mobile devices, use the device's orientation as the direction of gravity", default: true},      
+  {name: "maxCopies",      type: "numberRange", label: "Max Copies", default: 10, min: 1, max: 50, step: 1},
 ];
 
 export class App extends jst.Component {
@@ -31,6 +32,8 @@ export class App extends jst.Component {
     this.debug              = DEBUG_MODE;
  
     this.scaleFactor        = 50;
+
+    this.loadConfig();
 
     this.platform           = new Platform();
 
@@ -113,6 +116,8 @@ export class App extends jst.Component {
 
   // Load the config from local storage
   loadConfig() {
+
+    console.log("EDE Loading config", this);
     // If there is a config in the URL, use that
     const urlParams = new URLSearchParams(window.location.search);
     let config = urlParams.get('config');
@@ -129,17 +134,26 @@ export class App extends jst.Component {
 
     let globalSettings = {};
     if (config) {
-      this.world.setConfig(config.world);
 
       if (config.globalSettings) {
         globalSettings = config.globalSettings;
       }
-      this.setPendingSave(false);
+      console.log("EDE set pending save", this);
     }
 
     this.globalParams = new ObjectParams(this, GLOBAL_PARAMS, globalSettings);
-    console.log("globalParams", this.globalParams, this);
 
+    this.config = config;
+
+  }
+
+  // Apply the config to the world, which will create all the objects
+  applyConfig() {
+    if (this.config) {
+      console.log("Applying config");
+      this.world.setConfig(this.config.world);
+    }
+    this.setPendingSave(false);
   }
 
   getGlobalParams() {
