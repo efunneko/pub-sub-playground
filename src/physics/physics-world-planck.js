@@ -128,6 +128,10 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
 
   }
 
+  getContactList() {
+    return this.world.getContactList();
+  }
+
   createBody(object, x, y, opts) {
     const body = this.world.createBody({
       type:     opts.isStatic ? 'static' : 'dynamic',

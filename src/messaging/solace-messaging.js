@@ -22,6 +22,7 @@ export class SolaceMessaging extends Messaging {
       vpnName:  this.vpnName || "default",
       noLocal:  true,
       connectRetries: 2,
+      reapplySubscriptions: true,
     }
 
     const factoryProps   = new solace.SolclientFactoryProperties();
