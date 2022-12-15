@@ -223,6 +223,8 @@ export let utils = {
           return utils.random(args[0], args[1]);
         case 'var':
           return variables[args[0]];
+        case 'attr':
+          return variables[args[0]];
         case 'topicLevel':
           return utils.topicLevel(args[0], variables.topic);
         case 'now':
