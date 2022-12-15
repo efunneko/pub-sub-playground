@@ -419,13 +419,17 @@ class ColorGrid extends Input {
         //gridTemplateRows:    `repeat(${this.rows}, 1fr)`,
         gridGap$px:         2,
       },
+      selectedBorder$c: {
+        border:          "3px solid white",
+      },
+      unselectedBorder$c: {
+        border:          "3px solid rgba(0,0,0,0.1)",
+      },
       selected$c: {
-        border:          "3px solid black",
         opacity:         1,
       },
       unselected$c: {
-        border:          "3px solid gray",
-        opacity:         0.75,
+        opacity:         0.85,
       },
       uiButton$c: {
         width$px:        40,
@@ -436,6 +440,16 @@ class ColorGrid extends Input {
         padding$px:      [2,4],
         cursor:          "pointer",
         transition:      "background-color 0.2s",
+        transition:      "opacity 0.2s",
+      },
+      outer$c: {
+        padding$px: 2,
+        borderRadius$px: 6,
+        transition:      "border 0.2s",
+      },
+      inner$c: {
+        backgroundColor: "white",
+        borderRadius$px: 4,
       },
     };
   }
@@ -445,17 +459,16 @@ class ColorGrid extends Input {
       {class: "-uiInput"},
       jst.$div(
         {cn: "-uiArray"},
-        this.options.map((color) => {
-          return jst.$div(
-            {
-              cn: `-uiButton ${this.colorSelected(color) ? "-selected" : "-unselected"}`,
-              style: `background-color: ${color};`,
-              events: {
-                click: () => this.onClick(color),
-              }
-            },
-          );
-        })
+        this.options.map((color) => jst.$div({cn: `-outer ${this.colorSelected(color) ? "-selectedBorder" : "-unselectedBorder"}`},
+          jst.$div({cn: '-inner'},
+          jst.$div({
+            cn: `-uiButton ${this.colorSelected(color) ? "-selected" : "-unselected"}`,
+            style: `background-color: ${color};`,
+            events: {
+              click: () => this.onClick(color),
+            }
+          })
+        )))
       )
     ));
   }
