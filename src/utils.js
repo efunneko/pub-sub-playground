@@ -264,6 +264,27 @@ export let utils = {
     } else {
       return val;
     }
+  },
+
+  getComplementaryColor: (color) => {
+    const lookup = {
+      'red': 'white',
+      'darkred': 'white',
+      'green': 'white',
+      'blue': 'white',
+      'yellow': 'black',
+      'cyan': 'white',
+      'magenta': 'white',
+      'white': 'black',
+      'black': 'white',
+      'orange': 'black',
+      'purple': 'white',
+      'pink': 'black',
+      'brown': 'white',
+      'grey': 'black',
+      'lightblue': 'black',
+    };
+    return lookup[color];
   }
 
   

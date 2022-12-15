@@ -398,6 +398,93 @@ class ButtonArray extends Input {
 
 }
 
+class ColorGrid extends Input {
+  constructor(app, obj, opts, formInfo) {
+    super(app, obj, opts, formInfo);
+    this.cols        = opts.cols || 4;
+    this.rows        = Math.floor(opts.options.length / this.cols) + 1;
+    this.options     = opts.options;
+    this.multiSelect = opts.multiSelect || false;
+  }
+
+  cssLocal() {
+    return {
+      uiInput$c: {
+        display:         "inline-block",
+        margin$px:       [2,0,5,0],
+      },
+      uiArray$c: {
+        display:         "grid",
+        gridTemplateColumns: `repeat(${this.cols}, 1fr)`,
+        //gridTemplateRows:    `repeat(${this.rows}, 1fr)`,
+        gridGap$px:         2,
+      },
+      selected$c: {
+        border:          "3px solid black",
+        opacity:         1,
+      },
+      unselected$c: {
+        border:          "3px solid gray",
+        opacity:         0.75,
+      },
+      uiButton$c: {
+        width$px:        40,
+        height$px:       40,
+        color:           "black",
+        //border:          "1px solid gray",
+        borderRadius$px: 4,
+        padding$px:      [2,4],
+        cursor:          "pointer",
+        transition:      "background-color 0.2s",
+      },
+    };
+  }
+
+  render() {
+    return super.renderInput(jst.$div(
+      {class: "-uiInput"},
+      jst.$div(
+        {cn: "-uiArray"},
+        this.options.map((color) => {
+          return jst.$div(
+            {
+              cn: `-uiButton ${this.colorSelected(color) ? "-selected" : "-unselected"}`,
+              style: `background-color: ${color};`,
+              events: {
+                click: () => this.onClick(color),
+              }
+            },
+          );
+        })
+      )
+    ));
+  }
+
+  colorSelected(color) {
+    return this.value.includes(color);
+  }
+
+  onClick(color) {
+
+    if (this.multiSelect) {
+      if (this.value.includes(color)) {
+        this.value = this.value.filter((c) => c != color);
+      } else {
+        this.value.push(color);
+      }
+    } else {
+      this.value = [color];
+    }
+    this.refresh();
+  }
+
+  getValue() {
+    return this.value;
+  }
+
+}
+
+
 class List extends Input {
   constructor(app, obj, opts, formInfo) {
     super(app, obj, opts, formInfo);
@@ -628,6 +715,7 @@ export class UIInputTypes {
       case "color": return Color;
       case "list": return List;
       case "buttonArray": return ButtonArray;
+      case "colorGrid": return ColorGrid;
       case "numberRange": return NumberRange;
       case "subObject": return SubObject;
     }
@@ -641,6 +729,7 @@ export class UIInputTypes {
   static Color          = Color;
   static List           = List;
   static ButtonArray    = ButtonArray;
+  static ColorGrid      = ColorGrid;
   static NumberRange    = NumberRange;
   static SubObject      = SubObject;
 

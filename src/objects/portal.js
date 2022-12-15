@@ -18,19 +18,23 @@ const defaultRadius        = 0.5
 const openColor            = 0x000000
 const closedColor          = 0xffffff
 
+function isBrokerMode(obj, inputs) {
+  return inputs.mode.getValue() == "broker";
+}
 
 export class Portal extends StaticObject {
   constructor(app, opts) {
     super(app, opts, [
       {name: "name", type: "text", label: "Name", default: "Unnamed Portal"},
       {name: "portalId", type: "text", label: "Portal ID", default: "1"},
-      {name: "mode", type: "select", label: "Portal Mode", default: "broker", options: [{value: "disabled", label: "Disabled"}, {value: "broker", label: "Broker"}, {value: "void", label: "Send to Void"}]},
-      {name: "broker", type: "select", label: "Broker", options: () => this.app.getBrokers().map(b => { return {value: b.getName(), label: b.getName()}})},
-      {name: "bindToQueue", type: "boolean", label: "Bind to Queue", title: "If enabled, the portal will bind to a queue on the broker.", default: false},
-      {name: "queueName", type: "text", dependsOn: ["bindToQueue"], showIf: (obj, inputs) => inputs.bindToQueue.getValue(), label: "Queue Name", title: "If 'Bind to Queue' is true, this is the name of the queue to bind to. NOTE that binding to a named queue is only supported by Solace brokers.", default: ""},
-      {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions", default: false},
-      {name: "subscriptionList", type: "list", entryName: "Subscription", dependsOn: ["useSubscriptionList"], showIf: (obj, inputs) => inputs.useSubscriptionList.getValue(), label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker.", default: []},
-      {name: "lastConnectError", type: "textarea", width: 40, label: "Last Connect Error", readonly: true, default: ""},
+      {name: "enabled", type: "boolean", label: "Enabled", default: true},
+      {name: "mode", type: "select", label: "Portal Mode", default: "broker", options: [{value: "broker", label: "Connect to Broker"}, {value: "void", label: "Send to Void"}]},
+      {name: "broker", type: "select", label: "Broker", dependsOn: ["mode"], showIf: isBrokerMode, options: () => this.app.getBrokers().map(b => { return {value: b.getName(), label: b.getName()}})},
+      {name: "bindToQueue", type: "boolean", label: "Bind to Queue", dependsOn: ["mode"], showIf: isBrokerMode, title: "If enabled, the portal will bind to a queue on the broker.", default: false},
+      {name: "queueName", type: "text", dependsOn: ["bindToQueue", "mode"], showIf: (obj, inputs) => inputs.bindToQueue.getValue() && isBrokerMode(obj, inputs), label: "Queue Name", title: "If 'Bind to Queue' is true, this is the name of the queue to bind to. NOTE that binding to a named queue is only supported by Solace brokers.", default: ""},
+      {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", dependsOn: ["mode"], showIf: isBrokerMode, title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions", default: false},
+      {name: "subscriptionList", type: "list", entryName: "Subscription", dependsOn: ["useSubscriptionList", "mode"], showIf: (obj, inputs) => inputs.useSubscriptionList.getValue() && isBrokerMode(obj, inputs), label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker.", default: []},
+      {name: "lastConnectError", type: "textarea", width: 40, label: "Last Connect Error", dependsOn: ["mode"], showIf: isBrokerMode, readonly: true, default: ""},
       {name: "x", type: "hidden"},
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden", default: defaultRotation},
@@ -120,10 +124,10 @@ export class Portal extends StaticObject {
 
   manageConnection() {
     this.setConnectEffects();
-    if (this.mode == "broker" && !this.brokerConnection) {
+    if (this.mode == "broker" && this.enabled && !this.brokerConnection) {
       this.connect();
     }
-    else if (this.mode != "broker" && this.brokerConnection) {
+    else if ((this.mode != "broker" || !this.enabled) && this.brokerConnection) {
       this.disconnect();
     }
   }
@@ -621,6 +625,7 @@ export class Portal extends StaticObject {
         selectedMaterial:  new THREE.MeshPhongMaterial({color: 0xbbbb55, specular: 0x111111, shininess: 200}),
         onDown:            (obj, pos, info) => this.onDownScrewHead(pivot, pos, info),
         onMove:            (obj, pos, info) => this.onMoveScrewHead(pivot, pos, info),
+        onUp:              (obj, pos, info) => this.onUpScrewHead(pivot, pos, info),
       };
 
       // Register the object with the UI Selection Manager
@@ -655,6 +660,8 @@ export class Portal extends StaticObject {
 
   onMoveScrewHead(screwHead, pos, info) {
 
+    this.didRotate = true;
+
     // Figure out the angle between the position of the mouse and the center of the other screw head
     const angle = Math.atan2(this.rotationPoint.y - pos.y, this.rotationPoint.x - pos.x) + Math.PI/2 + this.rotationAdjustment
 
@@ -674,5 +681,11 @@ export class Portal extends StaticObject {
     //console.log("onMoveScrewHead", screwHead, pos, info)
   }
 
+  onUpScrewHead(screwHead, pos, info) {
+    if (this.didRotate) {
+      this.didRotate = false;
+      this.saveableConfigChanged();
+    }
+  }
 
 }

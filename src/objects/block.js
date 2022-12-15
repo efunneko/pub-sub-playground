@@ -25,9 +25,10 @@ export class Block extends DynamicObject {
       {name: "y", type: "hidden", eventLabels: ["position"]},
     ])
 
-    this.depth      = defaultDepth;
-    this.edgeRadius = 3;
-    this.uis        = app.ui.getUiSelection();
+    this.isSubObject = opts.isSubObject || false
+    this.depth       = defaultDepth;
+    this.edgeRadius  = 3;
+    this.uis         = app.ui.getUiSelection();
 
     this.create()
 
@@ -113,6 +114,13 @@ export class Block extends DynamicObject {
   onUp(obj, pos, info) {
     this.body.setDynamic();
     this.saveableConfigChanged();
+  }
+
+  onAppearanceChange() {
+    if (this.colors.length > 0) {
+      this.color = this.colors[0];      
+    }
+    super.onAppearanceChange();
   }
 
 }

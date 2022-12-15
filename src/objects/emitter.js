@@ -43,9 +43,9 @@ export class Emitter extends StaticObject {
   }
 
   getObjForConfig(objClass, opts = {}) {
-    opts.scene      = this.scene;
-    opts.dontRender = true;
-    const obj       = new objClass(this.app, opts);
+    opts.scene       = this.scene;
+    opts.isSubObject = true;
+    const obj        = new objClass(this.app, opts);
     obj.destroy();
     return obj;
   }
@@ -296,6 +296,7 @@ export class Emitter extends StaticObject {
         selectable:        false,
         onDown:            (obj, pos, info) => this.onDownScrewHead(pivot, pos, info),
         onMove:            (obj, pos, info) => this.onMoveScrewHead(pivot, pos, info),
+        onUp:              (obj, pos, info) => this.onUpScrewHead(pivot, pos, info),
       };
 
       // Register the object with the UI Selection Manager
@@ -330,6 +331,8 @@ export class Emitter extends StaticObject {
 
   onMoveScrewHead(screwHead, pos, info) {
 
+    this.didRotate = true;
+
     // Figure out the angle between the position of the mouse and the center of the other screw head
     const angle = Math.atan2(this.rotationPoint.y - pos.y, this.rotationPoint.x - pos.x) + Math.PI/2 + this.rotationAdjustment
 
@@ -347,6 +350,13 @@ export class Emitter extends StaticObject {
     this.redraw()
 
     //console.log("onMoveScrewHead", screwHead, pos, info)
+  }
+
+  onUpScrewHead(screwHead, pos, info) {
+    if (this.didRotate) {
+      this.saveableConfigChanged();
+      this.didRotate = false;
+    }
   }
 
   singleShot(obj, pos, info) {
@@ -388,6 +398,10 @@ export class Emitter extends StaticObject {
     opts.velocity   = {x: vx, y: vy};
     opts.useShadows = this.useShadows;
     opts.label      = utils.resolveExpression(opts.label, {topic: this.topic || ""});
+
+    if (opts.colors.length) {
+      opts.color = opts.colors[Math.floor(Math.random()*opts.colors.length)];
+    }
 
     console.log("EDE opts", opts);
 

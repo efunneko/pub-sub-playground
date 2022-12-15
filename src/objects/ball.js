@@ -17,19 +17,20 @@ export class Ball extends DynamicObject {
       {name: "y", type: "hidden", eventLabels: ["position"]},
       {name: "rotation", type: "hidden", eventLabels: ["rotation"]},      
       {name: "radius", type: "numberRange", min: 5, max: 40, step: 1, label: "Radius", eventLabels: ["appearance"], default: defaultRadius},
-      {name: "color", type: "color", label: "Ball Color", eventLabels: ["appearance"], default: "#ffffff"},
+      {name: "color", type: "hidden", default: "#ffffff"},
+      {name: "colors", type: "colorGrid", label: "Ball Color", eventLabels: ["appearance"], default: ["white"], multiSelect: opts.isSubObject, cols: 4, options: ["white", "red", "green", "blue", "yellow", "orange", "purple", "black"]},
       {name: "label", type: "text", label: "Label", eventLabels: ["appearance"]},
       {name: "labelColor", type: "color", label: "Label Color"},
       {name: "forceTopic", type: "boolean", label: "Force Topic", title: "Use the configured topic when going through a portal", default: false},
       {name: "topic", type: "text", width: 50, label: "Topic", title: "If Force Topic is true, this topic is used when going through a portal", default: ""},      
     ]);
 
-    // dontRender is a hacky thing used when this object is treated as a sub-object of another object
-    this.dontRender = opts.dontRender || false
+    console.log("EDE Ball constructor", this.color, opts)
+    this.isSubObject = opts.isSubObject || false
 
-    this.uis        = app.ui.getUiSelection();
+    this.uis         = app.ui.getUiSelection();
 
-    if (this.dontRender) return;
+    if (this.isSubObject) return;
 
     this.create()
 
@@ -45,7 +46,7 @@ export class Ball extends DynamicObject {
   }
 
   create() {
-    if (this.dontRender) return;
+    if (this.isSubObject) return;
 
     super.create();
 
@@ -54,6 +55,7 @@ export class Ball extends DynamicObject {
     
     let texture;
 
+    console.log("EDE Ball create", this.color, this.label)
     if (this.label) {
 
       let maxLineLength = 0;
@@ -62,6 +64,9 @@ export class Ball extends DynamicObject {
         if (line.length > maxLineLength) maxLineLength = line.length;
       });
 
+      let labelColor = utils.getComplementaryColor(this.color);
+      if (!labelColor) labelColor = "#000000";
+    
       // Create the material
       let height, width;
       const textTexture = utils.textToTexture({
@@ -72,7 +77,7 @@ export class Ball extends DynamicObject {
         fontSize: maxLineLength > 3 ? 360/maxLineLength : 120,
         align: 'center',
         valign: 'middle',
-        color: this.labelColor,
+        color: labelColor,
         backgroundColor: this.color,
       });
 
@@ -147,4 +152,12 @@ export class Ball extends DynamicObject {
     this.body.setDynamic();
     this.saveableConfigChanged();
   }
+
+  onAppearanceChange() {
+    if (this.colors.length > 0) {
+      this.color = this.colors[0];      
+    }
+    super.onAppearanceChange();
+  }
+
 }
