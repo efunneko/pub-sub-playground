@@ -317,7 +317,7 @@ export class Portal extends StaticObject {
     // If the object has a configured topic, use that, otherwise use the portal's topic
     let topic;
     if (obj.forceTopic && obj.topic) {
-      topic = obj.topic;
+      topic = utils.resolveExpression(obj.topic, obj);
     }
     else {
       const objType  = obj.constructor.name;

@@ -37,8 +37,6 @@ export class Emitter extends StaticObject {
     this.app.addEventListener('play', () => this.onAppPlay());
     this.app.addEventListener('pause', () => this.onAppPause());
 
-    console.log("Emitter: ", this);
-
     this.create();
   }
 
@@ -389,7 +387,6 @@ export class Emitter extends StaticObject {
     }
 
     const rotation  = opts.rotation || 0;
-    console.log("EDE rotation", rotation, this.rotation);
 
     opts.scene      = this.scene;
     opts.rotation   = parseFloat(rotation) + this.rotation;
@@ -397,13 +394,11 @@ export class Emitter extends StaticObject {
     opts.y          = y1;
     opts.velocity   = {x: vx, y: vy};
     opts.useShadows = this.useShadows;
-    opts.label      = utils.resolveExpression(opts.label, {topic: this.topic || ""});
-
     if (opts.colors.length) {
       opts.color = opts.colors[Math.floor(Math.random()*opts.colors.length)];
     }
 
-    console.log("EDE opts", opts);
+    opts.label      = utils.resolveExpression(opts.label, opts);
 
     this.app.world.addEphemeralObject(this.shotType, opts);
 
