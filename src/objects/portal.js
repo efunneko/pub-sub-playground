@@ -374,18 +374,20 @@ export class Portal extends StaticObject {
     }
     if (this.brokerConnection && this.connected) {
       this.mist.material.color.setHex(openColor);
-      this.torus.material.emmisiveIntensity = 2.0;
+      this.torus.material = this.openMaterial;
       if (this.pointLight) {
         this.pointLight.intensity = 3.3;
       }
     }
     else {
+      console.log("EDE - Setting portal to closed")
       this.mist.material.color.setHex(closedColor);
-      this.torus.material.emmisiveIntensity = 0.0;
+      this.torus.material = this.closedMaterial;
       if (this.pointLight) {
-        this.pointLight.intensity = 0.4;
+        this.pointLight.intensity = 0.1;
       }
     }
+    window.tm = this.torus.material;
   }
 
   createTorus(uisInfo) {
@@ -397,24 +399,59 @@ export class Portal extends StaticObject {
     const geometry = new THREE.TorusGeometry(this.app.scale(torusRadius), this.app.scale(torusTubeRadius), 8, 32);
 
     // Create the material
-    const material = new THREE.MeshPhysicalMaterial({
-      clearcoat: 1,
-      clearcoatRoughness: 0,
-      metalness: 0.5,
-      roughness: 0.5,
+    if (this.mode == "void") {
+      this.openMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0x666666,
+        clearcoat: 1,
+        clearcoatRoughness: 0,
+        metalness: 0.5,
+        roughness: 0.5,
+        emissive: 0,
+        emissiveIntensity: 0.1,
+        reflectivity: 0.5,
+        transmission: 0.5,
+        transparent: true,
+        opacity: 0.9,
+        attenuationColor: 0xffffff,
+        attenuationDistance: 0.5,
+      });
+    }
+    else {
+      this.openMaterial = new THREE.MeshPhysicalMaterial({
+        clearcoat: 1,
+        clearcoatRoughness: 0,
+        metalness: 0.5,
+        roughness: 0.5,
+        emissive: this.color,
+        emissiveIntensity: 0.5,
+        reflectivity: 0.5,
+        transmission: 0.5,
+        transparent: true,
+        opacity: 0.8,
+        attenuationColor: 0xffffff,
+        attenuationDistance: 0.5,
+      });
+    }
+
+    this.closedMaterial = new THREE.MeshPhysicalMaterial({
+      clearcoat: 0.5,
+      clearcoatRoughness: 0.5,
+      metalness: 0,
+      roughness: 1,
+      color: 0x888888,
       emissive: this.mode == "void" ? 0x000000 : this.color,
-      emissiveIntensity: this.mode == "void" ? 0.1 : 0.5,
-      reflectivity: 0.5,
-      transmission: 0.5,
-      transparent: true,
+      emissiveIntensity: 0,
+      reflectivity: 0,
+      transmission: 0,
+      transparent: false,
       opacity: 0.8,
       attenuationColor: 0xffffff,
       attenuationDistance: 0.5,
-
     });
 
+
     // Create the mesh
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(geometry, this.openMaterial);
 
     // If useShadows is true, then cast and receive shadows
     mesh.castShadow    = this.useShadows;

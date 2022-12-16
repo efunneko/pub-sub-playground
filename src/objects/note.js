@@ -6,6 +6,7 @@ import {StaticObject}  from './static-object.js'
 import {Assets}        from '../assets.js'
 import {utils}         from '../utils.js'
 
+const noteZPos       = 10;
 
 export class Note extends StaticObject {
   constructor(app, opts) {
@@ -13,6 +14,7 @@ export class Note extends StaticObject {
       {name: "text", type: "textarea", label: "Text", default: "Note"},
       {name: "fontSize", type: "text", label: "Font Size", default: "24"},
       {name: "color", type: "color", label: "Color", default: "#5555ff"},
+      {name: "z", type: "numberRange", label: "Height", min: 10, max: 150, default: 10, step: 10},
       {name: "x", type: "hidden"},
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden"},      
@@ -46,15 +48,15 @@ export class Note extends StaticObject {
     }
 
     // Create the geometry for the note
-    const geometry = new THREE.BoxGeometry(this.width, this.height, 1);
+    const geometry = new THREE.BoxGeometry(this.width, this.height, 2);
 
     // Create the material
-    const material = new THREE.MeshPhysicalMaterial({
+    const material = new THREE.MeshStandardMaterial({
       map:               this.texture,
-      metalness:         0.1,
-      roughness:         0.2,
-      transmission:      0.3,
-      thickness:         0.5,
+      metalness:         0,
+      roughness:         1,
+      //transmission:      0.3,
+      //thickness:         0.5,
     });
 
     // Create the mesh
@@ -62,7 +64,7 @@ export class Note extends StaticObject {
 
     // If useShadows is true, then cast and receive shadows
     mesh.castShadow    = this.useShadows;
-    //mesh.receiveShadow = this.useShadows;
+    mesh.receiveShadow = this.useShadows;
 
     // Add the mesh to the dynamic group
     this.group.add(mesh);
@@ -70,7 +72,10 @@ export class Note extends StaticObject {
     // Add the frame
     this.createFrame(this.width, this.height);
 
-    this.z = 150;
+    // Add the stick
+    //this.createStick();
+
+    //this.z = this.zPos;
     this.group.position.set(this.x, this.y, this.z);
 
     // Register with the selection manager
@@ -84,6 +89,22 @@ export class Note extends StaticObject {
       object: this,
     });
 
+  }
+
+  createStick() {
+    const stickMaterial = new THREE.MeshStandardMaterial({
+      map:               Assets.textures.woodTexture.albedo,
+      roughnessMap:      Assets.textures.woodTexture.rough,
+      metalness:         0.1,
+      roughness:         1,
+    });
+
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, noteZPos, 32), stickMaterial);
+    stick.position.set(0, 0, -noteZPos/2-10);
+    stick.rotation.x = Math.PI/2;
+    stick.castShadow    = this.useShadows;
+    stick.receiveShadow = this.useShadows;
+    this.group.add(stick);
   }
 
   saveConfigForm(form) {
