@@ -85,7 +85,7 @@ export class Broker extends StaticObject {
         envMapIntensity:   0.25,
         })
     );
-    base.position.set(0, 0, -5);
+    base.position.set(0, 0, -5.2);
     base.castShadow    = this.useShadows;
     base.receiveShadow = this.useShadows;
     this.group.add(base);

@@ -2,8 +2,8 @@
 
 import {Messaging} from './messaging';
 //import {solace}    from 'solclientjs/lib-browser/solclient.js';
-let solace = require('solclientjs/lib-browser/solclient.js');
-
+//let solace = require('solclientjs/lib-browser/solclient.js');
+let solace = require('../../lib/solclient.js');
 
 export class SolaceMessaging extends Messaging {
   constructor(opts) {
@@ -191,6 +191,7 @@ export class SolaceMessaging extends Messaging {
 
   publish(topic, msg, opts = {}) {
 
+    console.log("publishing", topic, msg, opts)
     if (this.session) {
       // Publish on the session for Solace messaging
       try {
@@ -215,6 +216,11 @@ export class SolaceMessaging extends Messaging {
 
         if (opts.color) {
           sdt.addField("color", solace.SDTFieldType.STRING, opts.color);
+        }
+
+        // If there is a partition key, add it to the SDT
+        if (opts.partitionKey) {
+          sdt.addField("JMSXGroupID", solace.SDTFieldType.STRING, opts.partitionKey);
         }
 
         // Add the SDT to the message

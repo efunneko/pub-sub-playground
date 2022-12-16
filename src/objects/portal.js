@@ -316,6 +316,7 @@ export class Portal extends StaticObject {
     // Create the topic
     // If the object has a configured topic, use that, otherwise use the portal's topic
     let topic;
+    let opts = {};
     if (obj.forceTopic && obj.topic) {
       topic = utils.resolveExpression(obj.topic, obj);
     }
@@ -325,9 +326,15 @@ export class Portal extends StaticObject {
       topic = `portal/${this.name}/${this.portalId}/${objType}/${objColor}`;
     }
 
+    // Handle the Partition Key
+    if (obj.partitionKey) {
+      config.partitionKey = utils.resolveExpression(obj.partitionKey, obj);
+      opts.partitionKey   = config.partitionKey;
+    }
+
     // Send the message to the broker
     console.log("Sending message to broker", topic, config);
-    this.brokerConnection.publish(topic, config);
+    this.brokerConnection.publish(topic, config, opts);
 
   }
 
@@ -452,7 +459,7 @@ export class Portal extends StaticObject {
 
   createMist(uisInfo) {
 
-    const tr = this.app.scale(torusRadius)
+    const tr = this.app.scale(torusRadius*0.95)
     const geometry = new THREE.CylinderGeometry(tr, tr, tr, 8, 1, false);
     const material = new THREE.MeshPhysicalMaterial( { 
       color: this.mode == "void" ? 0x000000 : closedColor,
@@ -487,7 +494,7 @@ export class Portal extends StaticObject {
     // Create a path for the tube
     const path = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(btl, 0, 0),
+      new THREE.Vector3(btl-6, 0, 0),
     ]);
 
     const geometry = new THREE.TubeGeometry(path, 3, tr+this.app.scale(0.1), 32, false);

@@ -20,6 +20,7 @@ export class Ball extends DynamicObject {
       {name: "color", type: "hidden", default: "#ffffff"},
       {name: "colors", type: "colorGrid", label: "Ball Color", eventLabels: ["appearance"], default: ["white"], multiSelect: opts.isSubObject, cols: 4, options: ["white", "red", "green", "blue", "yellow", "orange", "purple", "black"]},
       {name: "label", type: "text", label: "Label", eventLabels: ["appearance"]},
+      {name: "partitionKey", type: "text", label: "Partition Key"},
       // {name: "labelColor", type: "color", label: "Label Color"},
       {name: "forceTopic", type: "boolean", label: "Force Topic", title: "Use the configured topic when going through a portal", default: false},
       {name: "topic", type: "text", width: 50, label: "Topic", title: "If Force Topic is true, this topic is used when going through a portal", default: ""},      

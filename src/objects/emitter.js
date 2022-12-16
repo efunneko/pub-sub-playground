@@ -19,7 +19,7 @@ export class Emitter extends StaticObject {
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden", default: defaultRotation},
       {name: "rate", type: "numberRange", min: 0.2, max: 8, step: 0.2, label: "Firing Rate (shots/sec)", default: 1},
-      {name: "strength", type: "numberRange", min: 1, max: 5, step: 1, label: "Shot Strength", default: 1},
+      {name: "strength", type: "numberRange", min: 1, max: 5, step: 0.2, label: "Shot Strength", default: 1},
       {name: "shotType", type: "select", label: "Shot Type", options: [{value: "ball", label: "Ball"}, {value: "block", label: "Block"}], default: "ball"},
       {name: "ballForConfig", type: "subObject", label: "Ball Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "ball"},
       {name: "blockForConfig", type: "subObject", label: "Block Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "block"},

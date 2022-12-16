@@ -79,8 +79,8 @@ export class World {
     // Create the scene, camera, renderer and lighting
     this.scene             = new THREE.Scene()
 
-    this.camera            = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 0.1, 2000 )
-    this.camera.position.z = 1300
+    this.camera            = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 0.1, 3500 )
+    this.camera.position.z = 2300
 
     this.renderer = new THREE.WebGLRenderer({antialias: this.app.quality == 'high'})
     //    this.renderer.setPixelRatio( window.devicePixelRatio * 0.8 )
@@ -112,10 +112,10 @@ export class World {
       dirLight.shadow.camera.far                = 3000
       dirLight.shadow.blurSamples               = 8;
       dirLight.shadow.radius                    = 0.5
-      dirLight.shadow.camera.right              = 500
-			dirLight.shadow.camera.left               = -500
-			dirLight.shadow.camera.top	              = 500
-			dirLight.shadow.camera.bottom             = -500
+      dirLight.shadow.camera.right              = 1500
+			dirLight.shadow.camera.left               = -1500
+			dirLight.shadow.camera.top	              = 1500
+			dirLight.shadow.camera.bottom             = -1500
 
       if (false) {
         const cameraHelper = new THREE.CameraHelper(dirLight.shadow.camera);
