@@ -37,6 +37,7 @@ export class World {
     this.el               = opts.el
     this.ui               = opts.ui
     this.doPhysics        = false
+    this.animateSeqNum    = 0
     this.objects          = []  
     this.ephemeralObjects = []  // Objects that are not saved in the world state
 
@@ -122,7 +123,7 @@ export class World {
         this.scene.add(cameraHelper);
       }
     }
-         
+
     this.animate()
 
     // Set the camera and scene in the UI
@@ -252,6 +253,7 @@ export class World {
 
   animate() {
     this.animationFrameId = requestAnimationFrame((time) => {
+      this.animateSeqNum++;
       this.animate()
       if (1 || this.doPhysics) {
         if (!this.paused) {
@@ -290,12 +292,14 @@ export class World {
   setConfig(config) {
 
     let foundBoard = false;
-    config.objects.forEach(obj => {
-      this.addObject(obj.type, obj);
-      if (obj.type === "board") {
-        foundBoard = true;
-      }
-    })
+    if (config) {
+      config.objects.forEach(obj => {
+        this.addObject(obj.type, obj);
+        if (obj.type === "board") {
+          foundBoard = true;
+        }
+      })
+    }
     
     if (!foundBoard) {
       console.log("EDE - found no board, adding default")
@@ -310,6 +314,10 @@ export class World {
 
   getPortalsUsingBroker(broker) {
     return this.objects.filter(o => o.type === "portal" && o.object.getValue("broker") === broker.getValue("name")).map(o => o.object);
+  }
+
+  getAnimateSeqNum() {
+    return this.animateSeqNum;
   }
 
   initOrientationEvents() {

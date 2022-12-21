@@ -150,8 +150,10 @@ export class App extends jst.Component {
   // Apply the config to the world, which will create all the objects
   applyConfig() {
     if (this.config) {
-      console.log("Applying config");
       this.world.setConfig(this.config.world);
+    }
+    else {
+      this.world.setConfig(undefined);
     }
     this.setPendingSave(false);
   }
@@ -243,6 +245,10 @@ export class App extends jst.Component {
   getValue(paramName) {
     console.log("getValue in app", paramName, this.globalParams);
     return this.globalParams.getValue(this, paramName);
+  }
+
+  getAnimateSeqNum() {
+    return this.world.getAnimateSeqNum();
   }
 
 }

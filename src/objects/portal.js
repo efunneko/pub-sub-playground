@@ -11,7 +11,7 @@ const backgroundTextureUrl = "images/textures/..."
 const torusRadius          = 1
 const torusTubeRadius      = 0.15
 const backTubeLength       = 1
-const defaultColor         = 0x0000ff
+const defaultColor         = 'blue'
 const defaultRotation      = 0
 const defaultRadius        = 0.5
 
@@ -30,8 +30,9 @@ export class Portal extends StaticObject {
       {name: "enabled", type: "boolean", label: "Enabled", default: true},
       {name: "mode", type: "select", label: "Portal Mode", default: "broker", options: [{value: "broker", label: "Connect to Broker"}, {value: "void", label: "Send to Void"}]},
       {name: "broker", type: "select", label: "Broker", dependsOn: ["mode"], showIf: isBrokerMode, options: () => this.app.getBrokers().map(b => { return {value: b.getName(), label: b.getName()}})},
-      {name: "bindToQueue", type: "boolean", label: "Bind to Queue", dependsOn: ["mode"], showIf: isBrokerMode, title: "If enabled, the portal will bind to a queue on the broker.", default: false},
-      {name: "queueName", type: "text", dependsOn: ["bindToQueue", "mode"], showIf: (obj, inputs) => inputs.bindToQueue.getValue() && isBrokerMode(obj, inputs), label: "Queue Name", title: "If 'Bind to Queue' is true, this is the name of the queue to bind to. NOTE that binding to a named queue is only supported by Solace brokers.", default: ""},
+      {name: "color", type: "color", label: "Color", dependsOn: ["mode"], showIf: isBrokerMode, default: defaultColor},
+      {name: "bindToQueue", type: "boolean", label: "Bind to Queue", dependsOn: ["mode"], showIf: isBrokerMode, title: "If enabled, the portal will bind to a queue on the broker.", eventLabels: ["queueConfig"], default: false},
+      {name: "queueName", type: "text", dependsOn: ["bindToQueue", "mode"], showIf: (obj, inputs) => inputs.bindToQueue.getValue() && isBrokerMode(obj, inputs), label: "Queue Name", eventLabels: ["queueConfig"], title: "If 'Bind to Queue' is true, this is the name of the queue to bind to. NOTE that binding to a named queue is only supported by Solace brokers.", default: ""},
       {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", dependsOn: ["mode"], showIf: isBrokerMode, title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions", default: false},
       {name: "subscriptionList", type: "list", entryName: "Subscription", dependsOn: ["useSubscriptionList", "mode"], showIf: (obj, inputs) => inputs.useSubscriptionList.getValue() && isBrokerMode(obj, inputs), label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker.", default: []},
       {name: "lastConnectError", type: "textarea", width: 40, label: "Last Connect Error", dependsOn: ["mode"], showIf: isBrokerMode, readonly: true, default: ""},
@@ -43,7 +44,6 @@ export class Portal extends StaticObject {
     this.redrawOnMove        = true;
 
     this.radius              = opts.radius   || defaultRadius
-    this.color               = opts.color    || defaultColor
 
     // Get the UI Selection Manager
     this.uis = this.app.ui.getUiSelection();
@@ -79,6 +79,7 @@ export class Portal extends StaticObject {
     this.createTube(uisInfo);
     this.createBack(uisInfo);
     this.createScrewHeads();
+    this.createOnOffButton();
 
     if (this.app.quality === "high") {
       this.createPointLight();
@@ -164,12 +165,11 @@ export class Portal extends StaticObject {
     this.brokerConnection.disconnect();
     this.brokerConnection = null;
     this.connected        = false;
+    this.setConnectEffects();
   }
 
   // Called when the connection to the broker is established
   onConnect(connection) {
-    console.log("Connected to broker", connection);
-
     this.connected        = true;
     this.lastConnectError = "";
 
@@ -195,14 +195,12 @@ export class Portal extends StaticObject {
 
   // Called when the connection to the broker is lost
   onDisconnect(connection) {
-    console.log("Disconnected from broker", connection);
     this.connected = false;
+    this.setConnectEffects();
   }
 
   // Called when a message is received from the broker
   onMessage(topic, message, payload) {
-    console.log("Message received", topic, message, payload);
-
     let newObj = payload;
 
     // Set the position of the new object to be just in front of the portal
@@ -228,8 +226,6 @@ export class Portal extends StaticObject {
 
   // Called when an object collides with the portal
   onCollision(body, obj) {
-    console.log("Collision with portal", body, obj);
-
     // If we are a void portal, just destroy the object and remove it from the world
     if (this.mode === "void") {
       obj.destroy();
@@ -263,6 +259,11 @@ export class Portal extends StaticObject {
       console.log("Object is static");
     }
 
+  }
+
+  onQueueConfigChange() {
+    this.disconnect();
+    this.connect();
   }
 
   // Check for any current contacts with the portal and 
@@ -380,7 +381,6 @@ export class Portal extends StaticObject {
       }
     }
     else {
-      console.log("EDE - Setting portal to closed")
       this.mist.material.color.setHex(closedColor);
       this.torus.material = this.closedMaterial;
       if (this.pointLight) {
@@ -518,6 +518,64 @@ export class Portal extends StaticObject {
     this.mist = mesh;
 
     // Register with the selection manager
+    this.uis.registerMesh(mesh, uisInfo);
+
+  }
+
+  createOnOffButton() {
+
+    if (this.mode == "void") {
+      return;
+    }
+
+    const tr     = this.app.scale(torusRadius)
+    const radius = tr*0.16;
+    const height = tr*0.05;
+    const x      = -tr;
+    const y      = tr/2;
+    const z      = tr*2.1;
+
+    // Make a cynlinder for the button that points away from the user
+    const geometry = new THREE.CylinderGeometry(radius, radius, height, 32, 1, false);
+    const material = new THREE.MeshPhysicalMaterial( {
+      color: 0x888888,
+    });
+    const topMaterial = new THREE.MeshStandardMaterial( {
+      map:          Assets.textures.icons.powerButton,
+      transparent:  true,
+    });
+    const mesh = new THREE.Mesh( geometry, [material, topMaterial, topMaterial] );
+
+    mesh.position.set(x, y, z);
+    mesh.rotation.x = Math.PI/2;
+    mesh.rotation.y = Math.PI/2;
+    mesh.castShadow    = this.useShadows;
+
+    // Add another cylinder inside the last so that the color can be changed
+    const innerGeo = new THREE.CylinderGeometry(radius, radius, height, 32, 1, false);
+    const innerMaterial = new THREE.MeshPhysicalMaterial( {
+      //color: 0x208000,
+      color: 0xcccccc,
+    });
+    const inner = new THREE.Mesh(geometry, innerMaterial);
+
+    inner.position.set(x, y, z);
+    inner.rotation.x = Math.PI/2;
+    inner.rotation.y = Math.PI/2;
+    inner.scale.set(0.9, 0.9, 0.9);
+
+    this.group.add( mesh );
+    this.group.add( inner );
+
+    // Selection properties for a screw head
+    const uisInfo = {
+      moveable:          false,
+      rotatable:         false,
+      selectable:        false,
+      onDown:            (obj, pos, info) => this.onDownOnOffButton(obj, pos, info),
+    };
+
+    // Register the object with the UI Selection Manager
     this.uis.registerMesh(mesh, uisInfo);
 
   }
@@ -730,6 +788,12 @@ export class Portal extends StaticObject {
       this.didRotate = false;
       this.saveableConfigChanged();
     }
+  }
+
+  onDownOnOffButton(mesh, pos, info) {
+    // Toggle the enabled state
+    this.enabled = !this.enabled;
+    this.manageConnection();
   }
 
 }

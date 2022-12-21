@@ -218,7 +218,7 @@ export class Emitter extends StaticObject {
       x: -tubeLength/4,
       y: tubeLength/4.2,
       z: 43,
-      texture: this.shotInterval ? Assets.textures.icons.pause : Assets.textures.icons.play,
+      texture: this.shotTimeout ? Assets.textures.icons.pause : Assets.textures.icons.play,
       onDown: (obj, pos, info) => this.startStopShot(obj, pos, info),
       //selectedTexture: Assets.getTexture('pause'),
     });
@@ -362,14 +362,23 @@ export class Emitter extends StaticObject {
   }
 
   startStopShot(obj, pos, info) {
-    if (this.shotInterval) {
-      clearInterval(this.shotInterval);
-      this.shotInterval = null;
+    if (this.shotTimeout) {
+      clearTimeout(this.shotTimeout);
+      this.shotTimeout = null;
       this.startStopButton.material.map = Assets.textures.icons.play;
     } else {
-      this.shotInterval = setInterval(() => this.lightNextRib(0), 1000/this.rate);
+      this.shotTimeout = setTimeout(() => this.fireShotTimeout(), 1000/this.rate);
       this.startStopButton.material.map = Assets.textures.icons.pause;
     }
+  }
+
+  fireShotTimeout() {
+    const seqNum = this.app.getAnimateSeqNum();
+    if (seqNum != this.animateSeqNum) {
+      this.lightNextRib(0);
+    }
+    this.animateSeqNum = seqNum;
+    this.shotTimeout   = setTimeout(() => this.fireShotTimeout(), 1000/this.rate);
   }
 
   // Fire a shot from the emitter

@@ -34,7 +34,6 @@ export class Barrier extends StaticObject {
     // Sanity check to remove any duplicate points
     this.removeDuplicatePoints();
 
-    console.log("EDE Barrier: ", this.points);
     // Now create the barrier
     this.create()
 
@@ -242,9 +241,7 @@ export class Barrier extends StaticObject {
 
   onUpScrewHead(screwHead, pos, info) {
 
-    console.log("onUpScrewHead", info, info.persistentSelected);
     if (!info.persistentSelected) {
-      console.log("onUpScrewHead removing points", info);
       this.removeDuplicatePoints();
       this.recreateBarrier();
     }

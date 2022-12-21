@@ -31,7 +31,6 @@ export class SolaceMessaging extends Messaging {
     solace.SolclientFactory.setLogLevel(solace.LogLevel.INFO);
 
     // Connect to Solace messaging
-    console.log("Connecting to Solace messaging", opts);
     try {
       this.session = solace.SolclientFactory.createSession(opts);
       this.session.connect();
@@ -43,14 +42,14 @@ export class SolaceMessaging extends Messaging {
 
     // Define all of our event listeners
     this.session.on(solace.SessionEventCode.UP_NOTICE, (sessionEvent) => {
-      console.log('=== Successfully connected and authorized ===');
-      console.log('Session event: ' + sessionEvent.infoStr + ' raised.');
+      //console.log('=== Successfully connected and authorized ===');
+      //console.log('Session event: ' + sessionEvent.infoStr + ' raised.');
       if (this.onConnect) {
         this.onConnect(this);
       }
       if (this.subscriptions.length) {
         this.subscriptions.forEach(sub => {
-          console.log("subscribing:", sub)
+          //console.log("subscribing:", sub)
           this._subscribe(sub.subscription);
         });
       }
@@ -62,14 +61,13 @@ export class SolaceMessaging extends Messaging {
         this.onConnectError(this, sessionEvent.infoStr);
       }
       
-      console.log('Connection failed to the message router: ' + sessionEvent.infoStr + '; error code: ' + sessionEvent.errorCode);
+      //console.log('Connection failed to the message router: ' + sessionEvent.infoStr + '; error code: ' + sessionEvent.errorCode);
       /*
       console.log('Details: ' + sessionEvent.details);
       console.log('Description: ' + sessionEvent.description);
       */
     });
     this.session.on(solace.SessionEventCode.DOWN_ERROR, (sessionEvent) => {
-      console.log('EDE Connection down error');
       /*
       console.log('Details: ' + sessionEvent.details);
       console.log('Description: ' + sessionEvent.description);
@@ -77,21 +75,21 @@ export class SolaceMessaging extends Messaging {
     });
 
     this.session.on(solace.SessionEventCode.DISCONNECTED, (sessionEvent) => {
-      console.log('Disconnected.');
+      //console.log('Disconnected.');
     });
 
     this.session.on(solace.SessionEventCode.SUBSCRIPTION_ERROR, (sessionEvent) => {
       console.log('Cannot subscribe to topic: ' + sessionEvent.correlationKey + '; error code: ' + sessionEvent.errorCode);
-      console.log('Details: ' + sessionEvent.details);
-      console.log('Description: ' + sessionEvent.description);
+      //console.log('Details: ' + sessionEvent.details);
+      //console.log('Description: ' + sessionEvent.description);
     });
 
     this.session.on(solace.SessionEventCode.SUBSCRIPTION_OK, (sessionEvent) => {
-      console.log('Subscribed to topic: ' + sessionEvent.correlationKey);
+      //console.log('Subscribed to topic: ' + sessionEvent.correlationKey);
     });
 
     this.session.on(solace.SessionEventCode.MESSAGE, (message) => {
-      console.log('Received message: "' + message.getBinaryAttachment() + '"');
+      //console.log('Received message: "' + message.getBinaryAttachment() + '"');
       this.rxMessage(message.getDestination().getName(), message);
     });
 
@@ -128,8 +126,6 @@ export class SolaceMessaging extends Messaging {
       console.log("Not connected to Solace messaging");
     }
 
-    console.log("added sub", subscription, this.session)
-
   }
 
   // Bind to a Solace named queue
@@ -140,10 +136,11 @@ export class SolaceMessaging extends Messaging {
       acknowledgeMode: solace.MessageConsumerAcknowledgeMode.CLIENT,
     });
     this.messageConsumer.on(solace.MessageConsumerEventName.UP, () => {
-      console.log("MessageConsumer is now up and running");
+      //console.log("MessageConsumer is now up and running");
     });
     this.messageConsumer.on(solace.MessageConsumerEventName.CONNECT_FAILED_ERROR, (e) => {
-      console.log("MessageConsumer failed to connect", e);
+      // TODO - need to plumb in events for success/failure of binds
+      //console.log("MessageConsumer failed to connect", e);
     });
     this.messageConsumer.on(solace.MessageConsumerEventName.MESSAGE, (message) => {
       // Need to explicitly ack otherwise it will not be deleted from the message router
@@ -161,16 +158,14 @@ export class SolaceMessaging extends Messaging {
   _subscribe(subscription) {
     // Subscribe on the session for Solace messaging
     try {
-      console.log("Subscribing to topic: " + subscription);
       this.session.subscribe(
         solace.SolclientFactory.createTopic(subscription),
         true,
         subscription,
         10000
       );
-      console.log("EDE Subscribed to topic: " + subscription);
     } catch (error) {
-      console.log(`Failed to subscribe to ${subscription}:`, error.toString());
+      console.warn(`Failed to subscribe to ${subscription}:`, error.toString());
     }
   }
 
@@ -191,7 +186,6 @@ export class SolaceMessaging extends Messaging {
 
   publish(topic, msg, opts = {}) {
 
-    console.log("publishing", topic, msg, opts)
     if (this.session) {
       // Publish on the session for Solace messaging
       try {
@@ -226,8 +220,6 @@ export class SolaceMessaging extends Messaging {
         // Add the SDT to the message
         solMessage.setUserPropertyMap(sdt);
 
-        console.log("SDT:", solMessage.getUserPropertyMap());
-
         this.session.send(
           solMessage
         );
@@ -238,7 +230,6 @@ export class SolaceMessaging extends Messaging {
   }
 
   rxMessage(topic, msg) {
-    console.log("rxMessage", topic, msg)
     let data;
     try {
       data = JSON.parse(msg.getBinaryAttachment());
@@ -272,7 +263,6 @@ export class SolaceMessaging extends Messaging {
     }
     return undefined;
   }
-
 
 }
 

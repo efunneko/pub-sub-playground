@@ -76,7 +76,6 @@ export class ObjectParams {
     this.paramEventLabels = {};
 
     params = params || [];
-    console.log(`Creating object params for ${obj.constructor.name}`, params, initialValues);
 
     // Copy the parameters into the params array
     params.forEach((param) => {
@@ -85,11 +84,9 @@ export class ObjectParams {
 
       // Set the initial value or the default value if there is no initial value
       if (initialValues && initialValues[param.name] !== undefined) {
-        console.log(`Setting ${param.name} to ${initialValues[param.name]}`);
         obj[param.name] = initialValues[param.name];
       }
       else if (param.default !== undefined && obj[param.name] === undefined) {
-        console.log(`Setting ${param.name} to default ${param.default}`);
         obj[param.name] = param.default;
       }
 

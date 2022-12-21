@@ -26,7 +26,7 @@ export class Assets {
       brass: {},
       greasyMetal: {},
       ridges: {},
-      icons: {},
+      icons: {},      
     };
 
     return Promise.all([
@@ -80,6 +80,9 @@ export class Assets {
       }),
       loader.loadAsync("images/textures/step_icon.png").then((texture) => {
         Assets.textures.icons.step = texture;
+      }),
+      loader.loadAsync("images/textures/onOff.png").then((texture) => {
+        Assets.textures.icons.powerButton = texture;
       }),
     ])
   }
