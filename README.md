@@ -1,18 +1,17 @@
-# pubsub-goldberg
+# pub-sub-playground
 
-A basic physics based Rube Goldberg type machine that runs in a browser and allows connections to pub/sub brokers to 'warp' objects between connected
-browser pages. Threejs is used to render the environment
+A browser tool that lets you experiment with Publish Subscribe messaging in a 2d-physics/3d-rendered environment. It currently supports MQTT and Solace (SMF) messaging
 
 ## Get Started
 ```
-git clone https://github.com/efunneko/pubsub-goldberg.git
-cd pubsub-goldberg/
+git clone https://github.com/efunneko/pub-sub-playground.git
+cd pub-sub-playground/
 npm install
 npm run watch
 ```
 
 ## Things to know
-1. You need to create a 'broker' object to configure where and how to log in (NOTE that I have only tested the SMF/Solace broker type recently)
+1. You need to create a 'broker' object to configure where and how to log in
 1. Once you have a broker object, you can create a 'portal' object and configure it to choose which broker to use. This allows you to only have to configure all the broker related stuff in one place, even though you might have many portals
 1. Each portal will have an independent connection to the broker
 1. Each portal has an 'id' that is used in its default subscription so that objects going in a portal will come out of all other portals with the same id
