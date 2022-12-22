@@ -1,7 +1,7 @@
 {
-  "name": "jayesstee-starter",
+  "name": "pub-sub-playground",
   "version": "1.0.0",
-  "description": "Starting point for a simple jayesstee app",
+  "description": "A playground for testing pub-sub systems",
   "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -9,14 +9,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/efunneko/jayesstee-starter.git"
+    "url": "git+https://github.com/efunneko/pub-sub-playground.git"
   },
   "author": "Edward Funnekotter <efunneko@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/efunneko/jayesstee-starter/issues"
+    "url": "https://github.com/efunneko/pub-sub-playground/issues"
   },
-  "homepage": "https://github.com/efunneko/jayesstee-starter#readme",
+  "homepage": "https://github.com/efunneko/pub-sub-playground#readme",
   "devDependencies": {
     "html-webpack-plugin": "^5.5.0",
     "webpack": "^5.66.0",
