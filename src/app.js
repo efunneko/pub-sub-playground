@@ -9,6 +9,7 @@ import * as LZString           from "lz-string";
 const DEBUG_MODE = true;
 
 const GLOBAL_PARAMS = [
+  {name: "name",           type: "text",        label: "Name", default: "New board", title: "Name of the board"},
   {name: "quality",        type: "select",      label: "Graphics Quality", default: "medium", options: [{label: "Low", value: "low"}, {label: "Medium", value: "medium"}, {label: "High", value: "high"}]},
   {name: "volume",         type: "numberRange", label: "Volume", default: 5, min: 1, max: 10, step: 1},
   {name: "dynamicGravity", type: "boolean",     label: "Dynamic Gravity", title: "On mobile devices, use the device's orientation as the direction of gravity", default: true},      
@@ -22,7 +23,7 @@ export class App extends jst.Component {
     // This will be initialized after the persistent data is loaded
     this.globalParams       = null;
     
-    this.title              = "Solly Goldberg";
+    this.title              = "Pub-Sub Playground";
     this.alerts             = [];
     this.brokers            = [];
           
@@ -112,6 +113,10 @@ export class App extends jst.Component {
   onSettingsChange(data) {
     this.globalParams.setValues(this, data);
     this.setPendingSave(true);
+
+    if (this.world) {
+      this.world.setMaxCopies(this.maxCopies);
+    }
   }
 
   // Load the config from local storage
@@ -155,6 +160,7 @@ export class App extends jst.Component {
     else {
       this.world.setConfig(undefined);
     }
+    this.world.setMaxCopies(this.maxCopies);
     this.setPendingSave(false);
   }
 

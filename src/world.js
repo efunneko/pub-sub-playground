@@ -46,7 +46,7 @@ export class World {
 
     // Maximum number of allowed copies of an object
     // A copy can occur when an object is received from 2 or more portals
-    this.maxCopies = this.app.maxCopies
+    this.maxCopies = opts.maxCopies || 5
 
     //this.initOrientationEvents()
     this.gravity = {x: 0, y: 0, z: 0}
@@ -306,6 +306,10 @@ export class World {
       this.addObject("board", {x1: -500, y1: -300, x2: 500, y2: 300});
     }
 
+  }
+
+  setMaxCopies(maxCopies) {
+    this.maxCopies = maxCopies;
   }
 
   getBrokers() {

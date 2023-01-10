@@ -636,7 +636,8 @@ class NumberRange extends Input {
         height$px:       this.height,
       },
       rangeInput$c: {
-        accentColor:     "#69ffd9",
+        //accentColor:     "#69ffd9",
+        accentColor:     "#55cca9",
         marginRight$px:  15,
       },
     };

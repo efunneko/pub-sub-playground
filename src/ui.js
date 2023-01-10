@@ -101,7 +101,8 @@ export class UI extends jst.Component {
         backgroundColor: "#00C895",
       },
       uiFormColorsInverse$c: {
-        color:           "#00c895",
+        //color:           "#00c895",
+        color:           "#00a875",
         backgroundColor: "#fff",
       }
     };
@@ -124,6 +125,10 @@ export class UI extends jst.Component {
         },
         jst.$div({cn: "-uiButton", events: {click: e => this.togglePause()}},
           jst.if(this.state == "playing") && jst.$i({cn: "fas fa-pause"}) || jst.$i({cn: "fas fa-play"}),
+        ),
+        jst.if(this.state != "playing") && jst.$div(
+          {cn: "-uiButton", title: "Menu", events: {click: e => this.settings()}},
+          jst.$i({cn: "fas fa-bars"}),
         ),
         jst.if(this.state != "playing") && jst.$div(
           {cn: "-uiButton", title: "Settings", events: {click: e => this.settings()}},

@@ -7,16 +7,20 @@ import {UIInputTypes}         from '../ui-input-types.js'
 import {utils}                from '../utils.js'
 
 
-const backgroundTextureUrl = "images/textures/..."
-const torusRadius          = 1
-const torusTubeRadius      = 0.15
-const backTubeLength       = 1
-const defaultColor         = 'blue'
-const defaultRotation      = 0
-const defaultRadius        = 0.5
-
-const openColor            = 0x000000
-const closedColor          = 0xffffff
+const backgroundTextureUrl     = "images/textures/..."
+const torusRadius              = 1
+const torusTubeRadius          = 0.15
+const backTubeLength           = 1
+const defaultColor             = 'blue'
+const defaultRotation          = 0
+const defaultRadius            = 0.5
+    
+const openColor                = 0x000000
+const closedColor              = 0xffffff
+    
+const onOffButtonOnColor       = 0x60a060
+const onOffButtonOffColor      = 0xa06060
+const onOffButtonDisabledColor = 0xcccccc
 
 function isBrokerMode(obj, inputs) {
   return inputs.mode.getValue() == "broker";
@@ -131,6 +135,7 @@ export class Portal extends StaticObject {
     else if ((this.mode != "broker" || !this.enabled) && this.brokerConnection) {
       this.disconnect();
     }
+    this.setOnOffButtonMaterial();
   }
 
   // Connect to the configured Broker
@@ -373,6 +378,7 @@ export class Portal extends StaticObject {
     if (this.mode === "void") {
       return;
     }
+    this.setOnOffButtonMaterial();
     if (this.brokerConnection && this.connected) {
       this.mist.material.color.setHex(openColor);
       this.torus.material = this.openMaterial;
@@ -387,7 +393,23 @@ export class Portal extends StaticObject {
         this.pointLight.intensity = 0.1;
       }
     }
-    window.tm = this.torus.material;
+  }
+
+  setOnOffButtonMaterial() {
+    if (this.mode === "void") {
+      return;
+    }
+    if (this.enabled) {
+      if (this.brokerConnection && this.connected) {
+        this.onOffButton.material.color.setHex(onOffButtonOnColor);
+      }
+      else {
+        this.onOffButton.material.color.setHex(onOffButtonOffColor);
+      }
+    }
+    else {
+      this.onOffButton.material.color.setHex(onOffButtonDisabledColor);
+    }
   }
 
   createTorus(uisInfo) {
@@ -554,18 +576,17 @@ export class Portal extends StaticObject {
     // Add another cylinder inside the last so that the color can be changed
     const innerGeo = new THREE.CylinderGeometry(radius, radius, height, 32, 1, false);
     const innerMaterial = new THREE.MeshPhysicalMaterial( {
-      //color: 0x208000,
-      color: 0xcccccc,
+      color: onOffButtonDisabledColor,
     });
-    const inner = new THREE.Mesh(geometry, innerMaterial);
+    this.onOffButton = new THREE.Mesh(geometry, innerMaterial);
 
-    inner.position.set(x, y, z);
-    inner.rotation.x = Math.PI/2;
-    inner.rotation.y = Math.PI/2;
-    inner.scale.set(0.9, 0.9, 0.9);
+    this.onOffButton.position.set(x, y, z);
+    this.onOffButton.rotation.x = Math.PI/2;
+    this.onOffButton.rotation.y = Math.PI/2;
+    this.onOffButton.scale.set(0.9, 0.9, 0.9);
 
     this.group.add( mesh );
-    this.group.add( inner );
+    this.group.add( this.onOffButton );
 
     // Selection properties for a screw head
     const uisInfo = {
@@ -574,6 +595,8 @@ export class Portal extends StaticObject {
       selectable:        false,
       onDown:            (obj, pos, info) => this.onDownOnOffButton(obj, pos, info),
     };
+
+    this.setOnOffButtonMaterial();
 
     // Register the object with the UI Selection Manager
     this.uis.registerMesh(mesh, uisInfo);
