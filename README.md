@@ -2,13 +2,17 @@
 
 A browser tool that lets you experiment with Publish Subscribe messaging in a 2d-physics/3d-rendered environment. It currently supports MQTT and Solace (SMF) messaging
 
-## Get Started
+## Get Started from Source
 ```
 git clone https://github.com/efunneko/pub-sub-playground.git
 cd pub-sub-playground/
 npm install
 npm run watch
 ```
+
+## Use the hosted version
+
+[Pub-Sub Playground](http://pub-sub-playground.s3-website.us-east-2.amazonaws.com/)
 
 ## Things to know
 1. You need to create a 'broker' object to configure where and how to log in
