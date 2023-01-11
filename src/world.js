@@ -51,8 +51,6 @@ export class World {
     //this.initOrientationEvents()
     this.gravity = {x: 0, y: 0, z: 0}
 
-    console.log("EDE this.app.quality: " + this.app.quality)
-
     if (this.app.quality !== 'low') {
       this.useShadows = true
     }
@@ -186,7 +184,6 @@ export class World {
     
     // Create a new object with the same config
     let newObj = this.addObject(config.type, config, null, ephemeral);
-    console.log("EDE Cloned object", config, newObj);
     return newObj;
   }
 
@@ -199,9 +196,11 @@ export class World {
     }
 
     let obj = this.addObject(messagePayload.type, messagePayload, guid, true);
-    obj.topic = topic;
 
-    this.objectsByGuid[guid] = this.objectsByGuid[guid] ? (this.objectsByGuid[guid]+1) : 1;
+    if (obj) {
+      obj.topic = topic;
+      this.objectsByGuid[guid] = this.objectsByGuid[guid] ? (this.objectsByGuid[guid]+1) : 1;
+    }
     return obj;
   }
 
@@ -248,6 +247,7 @@ export class World {
       this.removeObject(o.object)
     });
     this.app.loadConfig();
+    this.app.applyConfig();
 
   }
 
@@ -302,7 +302,6 @@ export class World {
     }
     
     if (!foundBoard) {
-      console.log("EDE - found no board, adding default")
       this.addObject("board", {x1: -500, y1: -300, x2: 500, y2: 300});
     }
 

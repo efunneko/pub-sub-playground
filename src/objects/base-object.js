@@ -12,9 +12,6 @@ export class BaseObject {
     this.app  = app
     this.opts = Object.assign({}, opts)
 
-    // Get the type of the object - lowercase version of the class
-    this.type = this.constructor.name.toLowerCase();
-
     // The object parameters
     this.objectParams = new ObjectParams(this, params, opts);
 
@@ -66,9 +63,6 @@ export class BaseObject {
 
   initConfigParams(params) {
 
-    // Add the object type to the config params
-    //params.push({name: 'type', type: 'hidden', value: this.constructor.name.toLowerCase()});
-
     // Adjust each of the config params
     params.forEach(param => {
 
@@ -100,7 +94,6 @@ export class BaseObject {
         });
       }
     });
-    console.log("paramEventLabels = ", this.paramEventLabels);
     return params;
   }
 
@@ -122,7 +115,6 @@ export class BaseObject {
   }
 
   getValue(paramName) {
-    console.log(`getValue(${paramName}) = `, this[paramName]);
     return this.objectParams.getValue(this, paramName);
   }
 
@@ -154,11 +146,9 @@ export class BaseObject {
     this.group.position.set(this.x, this.y, this.z);
     this.didMove = true;
 
-    console.log("EDE onMove", info.ctrlKey, this.x, this.y, this.z);
     if (info.ctrlKey && !this.creatingDuplicate) {
       this.creatingDuplicate = true;
       this.duplicate = this.app.world.cloneObject(this);
-      console.log("EDE created dup", this.duplicate);
     }
 
     // If we are creating a duplicate, but the CTRL key is no longer down, then stop creating the duplicate

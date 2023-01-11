@@ -20,6 +20,8 @@ export class Note extends StaticObject {
       {name: "rotation", type: "hidden"},      
     ]);
 
+    this.type        = "note";
+
     this.uis    = app.ui.getUiSelection();
 
     this.create();

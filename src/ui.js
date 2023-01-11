@@ -118,10 +118,6 @@ export class UI extends jst.Component {
       jst.$div(
         {
           cn: "-uiLeft",
-          events: {
-            click: e => console.log("click", e),
-            enter: e => console.log("enter", e),
-          },
         },
         jst.$div({cn: "-uiButton", events: {click: e => this.togglePause()}},
           jst.if(this.state == "playing") && jst.$i({cn: "fas fa-pause"}) || jst.$i({cn: "fas fa-play"}),
@@ -161,10 +157,6 @@ export class UI extends jst.Component {
       jst.$div(
         {
           cn: "-uiRight",
-          events: {
-            click: e => console.log("click", e),
-            enter: e => console.log("enter", e),
-          },
         },
         this.currConfigForm,
       ),

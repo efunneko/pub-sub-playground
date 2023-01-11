@@ -25,16 +25,16 @@ export class Messaging {
   }
 
   disconnect() {
-    console.log("Disconnect")
+    //console.log("Disconnect")
   }
 
   dispose() {
-    console.log("Dispose")
+    //console.log("Dispose")
     this.disconnect();
   }
 
   subscribe(qos, subscription) {
-    console.log("added sub", subscription)
+    //console.log("added sub", subscription)
   }
 
   // Declare the set of subscriptions
@@ -58,7 +58,7 @@ export class Messaging {
       }
     });
 
-    console.log("setSubscriptions", subscriptions)
+    //console.log("setSubscriptions", subscriptions)
     this.subscriptions = subscriptions;
 
   }
@@ -68,7 +68,7 @@ export class Messaging {
   }
 
   unsubscribe(subscription) {
-    console.log("removed sub", subscription)
+    //console.log("removed sub", subscription)
     this._unsubscribe(subscription);
   }
 
@@ -76,13 +76,13 @@ export class Messaging {
   }
 
   rxMessage(topic, msg) {
-    console.log("rxMessage", topic, msg)
+    //console.log("rxMessage", topic, msg)
     let data;
     try {
       data = JSON.parse(msg.toString());
     }
     catch(e) {
-      console.log("Failed to get JSON payload of message:", topic, msg.toString());
+      //console.log("Failed to get JSON payload of message:", topic, msg.toString());
       data = null;
     }
 

@@ -33,7 +33,8 @@ export class Portal extends StaticObject {
       {name: "portalId", type: "text", label: "Portal ID", default: "1"},
       {name: "enabled", type: "boolean", label: "Enabled", default: true},
       {name: "mode", type: "select", label: "Portal Mode", default: "broker", options: [{value: "broker", label: "Connect to Broker"}, {value: "void", label: "Send to Void"}]},
-      {name: "broker", type: "select", label: "Broker", dependsOn: ["mode"], showIf: isBrokerMode, options: () => this.app.getBrokers().map(b => { return {value: b.getName(), label: b.getName()}})},
+      {name: "broker", type: "hidden"},
+      {name: "brokerId", type: "select", label: "Broker", dependsOn: ["mode"], showIf: isBrokerMode, options: () => this.app.getBrokers().map(b => { return {value: b.getId(), label: b.getName()}})},
       {name: "color", type: "color", label: "Color", dependsOn: ["mode"], showIf: isBrokerMode, default: defaultColor},
       {name: "bindToQueue", type: "boolean", label: "Bind to Queue", dependsOn: ["mode"], showIf: isBrokerMode, title: "If enabled, the portal will bind to a queue on the broker.", eventLabels: ["queueConfig"], default: false},
       {name: "queueName", type: "text", dependsOn: ["bindToQueue", "mode"], showIf: (obj, inputs) => inputs.bindToQueue.getValue() && isBrokerMode(obj, inputs), label: "Queue Name", eventLabels: ["queueConfig"], title: "If 'Bind to Queue' is true, this is the name of the queue to bind to. NOTE that binding to a named queue is only supported by Solace brokers.", default: ""},
@@ -44,6 +45,8 @@ export class Portal extends StaticObject {
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden", default: defaultRotation},
     ])
+
+    this.type                = "portal"
 
     this.redrawOnMove        = true;
 
@@ -140,11 +143,17 @@ export class Portal extends StaticObject {
 
   // Connect to the configured Broker
   connect() {
-    if (this.brokerConnection || !this.broker) {
+    if (this.brokerConnection || (!this.broker && !this.brokerId)) {
       return;
     }
 
-    const broker = this.app.getBrokerByName(this.broker);
+    let broker;
+    if (!this.brokerId) {
+      broker = this.app.getBrokerByName(this.broker);
+    }
+    else {
+      broker = this.app.getBrokerById(this.brokerId);
+    }
     if (!broker) {
       return;
     }
@@ -157,7 +166,14 @@ export class Portal extends StaticObject {
     });
 
     if (this.bindToQueue && this.queueName) {
-      this.brokerConnection.bindToQueue(this.queueName);
+      this.brokerConnection.bindToQueue(
+        this.queueName,
+        {
+          onUp: () => this.onQueueBindUp(),
+          onDown: () => this.onQueueBindDown(),
+          onError: (error) => this.onQueueBindError(error),
+        } 
+      );
     }
   }
 
@@ -190,7 +206,6 @@ export class Portal extends StaticObject {
   }
 
   onConnectError(connection, error) {
-    console.log("Connection error", connection, error);
     this.lastConnectError = error;
     this.brokerConnection = null;
 
@@ -202,6 +217,33 @@ export class Portal extends StaticObject {
   onDisconnect(connection) {
     this.connected = false;
     this.setConnectEffects();
+  }
+
+  // Called when the queue binding is up
+  onQueueBindUp() {
+    this.queueBound = true;
+    this.setConnectEffects();
+  }
+
+  // Called when the queue binding is down
+  onQueueBindDown() {
+    this.queueBound = false;
+    this.disconnect();
+    this.setConnectEffects();
+    // Set a timer to try to bind again in 1 second
+    setTimeout(() => this.manageConnection(), 1000);
+  }
+
+  // Called when there is an error binding to the queue
+  onQueueBindError(error) {
+    console.log("Error binding to queue: " + error);
+    this.lastConnectError = error.toString();
+    this.queueBound       = false;
+    this.disconnect();
+    this.setConnectEffects();
+
+    // Set a timer to try to bind again in 1 second
+    setTimeout(() => this.manageConnection(), 1000);
   }
 
   // Called when a message is received from the broker
@@ -278,7 +320,6 @@ export class Portal extends StaticObject {
     // Get the list of objects that are currently colliding with the portal
     const contacts = this.physics.getContactList();
 
-    console.log("Checking for current contacts", contacts);
     for (let contact = contacts; contact; contact = contact.getNext()) {
       const bodyA = contact.getFixtureA().getBody();
       const bodyB = contact.getFixtureB().getBody();
@@ -317,7 +358,7 @@ export class Portal extends StaticObject {
     config.rotation        = objRotation;
     config.angularVelocity = angularVelocity;
     config.guid            = obj.guid;
-    config.type            = obj.constructor.name.toLowerCase();
+    //config.type            = obj.constructor.name.toLowerCase();
 
     // Create the topic
     // If the object has a configured topic, use that, otherwise use the portal's topic
@@ -327,7 +368,7 @@ export class Portal extends StaticObject {
       topic = utils.resolveExpression(obj.topic, obj);
     }
     else {
-      const objType  = obj.constructor.name;
+      const objType  = obj.type;
       const objColor = obj.color;
       topic = `portal/${this.name}/${this.portalId}/${objType}/${objColor}`;
     }
@@ -339,18 +380,15 @@ export class Portal extends StaticObject {
     }
 
     // Send the message to the broker
-    console.log("Sending message to broker", topic, config);
     this.brokerConnection.publish(topic, config, opts);
 
   }
 
   // Subscribe to the portal topics
   subscribeToPortalTopics() {
-    console.log("Subscribing to portal topics1");
     if (!this.brokerConnection) {
       return;
     }
-    console.log("Subscribing to portal topics", this.portalId);
 
     // Subscribe to the portal topics
     if (this.useSubscriptionList) {
@@ -379,7 +417,7 @@ export class Portal extends StaticObject {
       return;
     }
     this.setOnOffButtonMaterial();
-    if (this.brokerConnection && this.connected) {
+    if (this.brokerConnection && this.connected && (!this.bindToQueue || this.queueBound)) {
       this.mist.material.color.setHex(openColor);
       this.torus.material = this.openMaterial;
       if (this.pointLight) {

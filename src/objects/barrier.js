@@ -13,6 +13,8 @@ export class Barrier extends StaticObject {
       {name: "points", type: "hidden"},
     ])
 
+    this.type = "barrier";
+
     // The snap grid size
     this.snapSize = opts.snapSize || 10;
 

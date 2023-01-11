@@ -284,7 +284,6 @@ export class UISelection {
 
   // Delete the selected mesh
   deleteSelectedMesh(force) {
-    console.log("deleteSelectedMesh", this.state.selectedMesh);
     const mesh = this.state.selectedMesh;
     if (mesh && mesh.userData && mesh.userData.uisInfo && (this.state.persistentSelected || force)) {
       const uisInfo = mesh.userData.uisInfo;
@@ -293,7 +292,6 @@ export class UISelection {
 
       // Call the onDelete callback if present
       if (uisInfo.onDelete) {
-        console.log("deleting");
         uisInfo.onDelete(mesh);
       }
     }
@@ -301,7 +299,6 @@ export class UISelection {
 
   // Called when the pointer up event happens within the delete/trash button
   deletePointerUp(e) {
-    console.log("deletePointerUp", this.state);
     // If we are dragging an mesh over the delete button, then delete it
     if (this.state.isDragging) {
       this.deleteSelectedMesh(true);

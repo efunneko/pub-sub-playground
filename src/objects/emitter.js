@@ -25,6 +25,8 @@ export class Emitter extends StaticObject {
       {name: "blockForConfig", type: "subObject", label: "Block Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "block"},
     ]);
 
+    this.type         = "emitter";
+
     this.redrawOnMove = true;
     this.seqNumber    = 0;
     this.uis          = app.ui.getUiSelection();
@@ -38,6 +40,17 @@ export class Emitter extends StaticObject {
     this.app.addEventListener('pause', () => this.onAppPause());
 
     this.create();
+  }
+
+  destroy() {
+    super.destroy();
+
+    // Stop the timer
+    if (this.shotTimeout) {
+      clearTimeout(this.shotTimeout);
+      this.shotTimeout = null;
+    }
+
   }
 
   getObjForConfig(objClass, opts = {}) {
@@ -373,6 +386,8 @@ export class Emitter extends StaticObject {
   }
 
   fireShotTimeout() {
+    if (!this.shotTimeout) return;
+
     const seqNum = this.app.getAnimateSeqNum();
     if (seqNum != this.animateSeqNum) {
       this.lightNextRib(0);

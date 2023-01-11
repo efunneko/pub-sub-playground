@@ -213,7 +213,6 @@ export let utils = {
     let re = /([^(]+)\(([^)]*)\)/;
     let match = re.exec(expr);
     if (match) {
-      console.log("Match: ", match)
       let func = match[1];
       let args = match[2].split(',').map((arg) => {return arg.trim()});
       switch (func) {
@@ -239,7 +238,6 @@ export let utils = {
   },
 
   seqNum: (name, start = 1, step = 1) => {
-    console.log('seqNum: ', name, start, step, seqNums);
     if (!seqNums[name]) {
       seqNums[name] = utils.toInt(start, 1);
     } else {

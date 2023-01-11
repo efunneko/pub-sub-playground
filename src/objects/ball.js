@@ -26,6 +26,8 @@ export class Ball extends DynamicObject {
       {name: "topic", type: "text", width: 50, label: "Topic", title: "If Force Topic is true, this topic is used when going through a portal", default: ""},      
     ]);
 
+    this.type        = "ball"
+
     this.isSubObject = opts.isSubObject || false
 
     this.uis         = app.ui.getUiSelection();

@@ -130,17 +130,23 @@ export class SolaceMessaging extends Messaging {
 
   // Bind to a Solace named queue
   // TODO - need to plumb in events for success/failure of binds
-  bindToQueue(queueName) {
+  bindToQueue(queueName, opts) {
     this.messageConsumer = this.session.createMessageConsumer({
       queueDescriptor: { name: queueName, type: solace.QueueType.QUEUE },
       acknowledgeMode: solace.MessageConsumerAcknowledgeMode.CLIENT,
     });
     this.messageConsumer.on(solace.MessageConsumerEventName.UP, () => {
+      if (opts.onUp) opts.onUp()
       //console.log("MessageConsumer is now up and running");
     });
     this.messageConsumer.on(solace.MessageConsumerEventName.CONNECT_FAILED_ERROR, (e) => {
+      if (opts.onError) opts.onError(e)
       // TODO - need to plumb in events for success/failure of binds
       //console.log("MessageConsumer failed to connect", e);
+    });
+    this.messageConsumer.on(solace.MessageConsumerEventName.DOWN, () => {
+      if (opts.onDown) opts.onDown()
+      //console.log("MessageConsumer is now down");
     });
     this.messageConsumer.on(solace.MessageConsumerEventName.MESSAGE, (message) => {
       // Need to explicitly ack otherwise it will not be deleted from the message router

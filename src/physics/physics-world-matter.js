@@ -101,12 +101,10 @@ export class PhysicsWorldMatter extends PhysicsWorld {
 
   // Create functions
   createBox(object, x, y, width, height, opts) {
-    console.log("createBox", x, y, width, height, opts, this.fixCreateOpts(opts))
     return this.addBody(object, Bodies.rectangle(x, y, width, height, this.fixCreateOpts(opts)));
   }
 
   createCircle(object, x, y, radius, opts) {
-    console.log("createCircle", x, y, radius, opts)
     return this.addBody(object, Bodies.circle(x, y, radius, this.fixCreateOpts(opts)));
   }
 

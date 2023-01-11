@@ -25,6 +25,8 @@ export class Block extends DynamicObject {
       {name: "y", type: "hidden", eventLabels: ["position"]},
     ])
 
+    this.type        = "block"
+
     this.isSubObject = opts.isSubObject || false
     this.depth       = defaultDepth;
     this.edgeRadius  = 3;

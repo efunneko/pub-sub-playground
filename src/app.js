@@ -122,7 +122,6 @@ export class App extends jst.Component {
   // Load the config from local storage
   loadConfig() {
 
-    console.log("EDE Loading config", this);
     // If there is a config in the URL, use that
     const urlParams = new URLSearchParams(window.location.search);
     let config = urlParams.get('config');
@@ -143,7 +142,6 @@ export class App extends jst.Component {
       if (config.globalSettings) {
         globalSettings = config.globalSettings;
       }
-      console.log("EDE set pending save", this);
     }
 
     this.globalParams = new ObjectParams(this, GLOBAL_PARAMS, globalSettings);
@@ -222,10 +220,35 @@ export class App extends jst.Component {
     return null;
   }
 
+  getBrokerById(id) {
+    const brokers = this.world.getBrokers();
+    for (let broker of brokers) {
+      if (broker.id == id) {
+        return broker;
+      }
+    }
+    return null;
+  }
+
   getBrokers() {
     return this.world.getBrokers();
   }
 
+  getNewBrokerId() {
+    const brokers = this.world.getBrokers();
+
+    // Look for the first unused broker id by finding the largest id and adding 1
+    let maxId = 0;
+    brokers.forEach(broker => {
+      if (broker.id > maxId) {
+        maxId = broker.id;
+      }
+    });
+
+    return maxId + 1;
+
+  }
+  
   getPortalsUsingBroker(broker) {
     return this.world.getPortalsUsingBroker(broker);
   }
@@ -249,7 +272,6 @@ export class App extends jst.Component {
   }
 
   getValue(paramName) {
-    console.log("getValue in app", paramName, this.globalParams);
     return this.globalParams.getValue(this, paramName);
   }
 

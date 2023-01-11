@@ -19,8 +19,6 @@ class Input extends jst.Component {
     this.onBlur     = opts.onBlur;
     this.dependents = [];
 
-    console.log("EDE Input: ", this.name, opts.name, this.value, obj.getValue);
-
     if (opts.dependsOn) {
       this.dependsOn = opts.dependsOn;
       if (!Array.isArray(this.dependsOn)) {

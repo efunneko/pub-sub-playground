@@ -20,6 +20,8 @@ export class Board extends StaticObject {
       {name: "y2", type: "hidden", eventLabels: ["position"]},
     ]);
 
+    this.type = "board"
+
     // The board never rotates
     this.rotation = 0;
 
@@ -124,8 +126,6 @@ export class Board extends StaticObject {
     // And add the edge to the physics world
     const cx = (x1 + x2) / 2;
     const cy = (y1 + y2) / 2;
-    console.log("Creating edge at " + cx + ", " + cy + " with length " + length + " and angle " + angle);
-    console.log("phys engine is " + this.app.getPhysicsEngine());
     let body = this.app.getPhysicsEngine().createBox(this, cx, -cy, length, width,{isStatic: true, angle: -angle, friction: 0.9, restitution: 0.2});
     edge.userData.physicsBody = body;
 
@@ -184,11 +184,9 @@ export class Board extends StaticObject {
   }
 
   onDownScrewHead(screwHead, pos, info, cornerCoords) {
-    console.log("Down on screw head");
   }
 
   onMoveScrewHead(screwHead, pos, info, cornerCoords) {
-    console.log("Move on screw head");
     const xName = cornerCoords[0] ? "x2" : "x1";
     const yName = cornerCoords[1] ? "y2" : "y1";
 
