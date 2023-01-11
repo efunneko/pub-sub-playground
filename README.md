@@ -2,13 +2,17 @@
 
 A browser tool that lets you experiment with Publish Subscribe messaging in a 2d-physics/3d-rendered environment. It currently supports MQTT and Solace (SMF) messaging
 
-## Get Started
+## Get Started from Source
 ```
 git clone https://github.com/efunneko/pub-sub-playground.git
 cd pub-sub-playground/
 npm install
 npm run watch
 ```
+
+## Use the hosted version
+
+[Pub-Sub Playground](http://pub-sub-playground.s3-website.us-east-2.amazonaws.com/)
 
 ## Things to know
 1. You need to create a 'broker' object to configure where and how to log in
@@ -20,6 +24,6 @@ npm run watch
 1. There is some protection to avoid very fast 'ping-ponging' of objects through portals, where an object is not eligible to go through the portal it arrived on for the first 200ms. I think this might be a bit buggy right now
 1. Anywhere you see a 'screw', you can grab it to resize or rotate it. This could use some polishing
 1. When changing barriers, you can grab internal screws and move them around. Grabbing an end screw will add to the chain. You can click on the end screw and then drag it - I find this is a bit hit or miss... If you drag a screw onto a neighboring screw on the same barrier, it will delete the screw
-1. When dragging a barrier, if you hold the CTRL key, it will clone it. I intend to make this happen for all objects
+1. When dragging an object, if you hold the CTRL key, it will clone it. 
 1. Balls can be annotated with a 'label'. There is a basic expression language for this, which is similar to RDP expressions. The most important expression is `${seqNum(<sequence-name>, [start], [step])}` which can give you an increasing sequence on the balls. You would configure this on the Emitter so that each ball emitted would get a unique number.
 1. When you click the save button the config will be in your URL so you can bookmark it or share it with others
