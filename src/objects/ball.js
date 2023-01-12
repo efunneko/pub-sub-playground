@@ -19,6 +19,7 @@ export class Ball extends DynamicObject {
       {name: "radius", type: "numberRange", min: 5, max: 40, step: 1, label: "Radius", eventLabels: ["appearance"], default: defaultRadius},
       {name: "color", type: "hidden", default: "#ffffff"},
       {name: "colors", type: "colorGrid", label: "Ball Color", eventLabels: ["appearance"], default: ["white"], multiSelect: opts.isSubObject, cols: 4, options: ["white", "red", "green", "blue", "yellow", "orange", "purple", "black"]},
+      {name: "colorStripes", type: "boolean", label: "Include Dual Colors", eventLabels: ["appearance"], default: false},
       {name: "label", type: "text", label: "Label", eventLabels: ["appearance"]},
       {name: "partitionKey", type: "text", label: "Partition Key"},
       // {name: "labelColor", type: "color", label: "Label Color"},
@@ -65,7 +66,12 @@ export class Ball extends DynamicObject {
         if (line.length > maxLineLength) maxLineLength = line.length;
       });
 
-      let labelColor = utils.getComplementaryColor(this.color);
+      let color = this.color;
+      if (color.match(/([^-]*)-([^-]*)/)) {
+        color = color.match(/([^-]*)-([^-]*)/)[1];
+      }
+
+      let labelColor = utils.getComplementaryColor(color);
       if (!labelColor) labelColor = "#000000";
     
       // Create the material

@@ -419,7 +419,13 @@ export class Emitter extends StaticObject {
     opts.velocity   = {x: vx, y: vy};
     opts.useShadows = this.useShadows;
     if (opts.colors.length) {
-      opts.color = opts.colors[Math.floor(Math.random()*opts.colors.length)];
+      if (opts.colorStripes && opts.colors.length > 1) {
+        const colours = [opts.colors[Math.floor(Math.random()*opts.colors.length)], opts.colors[Math.floor(Math.random()*opts.colors.length)]].sort();
+        opts.color = `${colours[0]}-${colours[1]}`;
+      }
+      else {
+        opts.color = opts.colors[Math.floor(Math.random()*opts.colors.length)];
+      }
     }
 
     opts.label      = utils.resolveExpression(opts.label, opts);

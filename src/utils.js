@@ -78,8 +78,22 @@ export let utils = {
     ctx.font      = font;
 
     // Fill the background
-    ctx.fillStyle = opts.backgroundColor;
-    ctx.fillRect(0, 0, width, height);
+    // If the color is specified as "color-color", then do half and half
+    let colors = opts.backgroundColor.split('-');
+    if (colors.length == 2) {
+      // Fill half the background with the first color
+      ctx.fillStyle = colors[0];
+      ctx.fillRect(0, 0, width/2, height);
+
+      // Fill the other half with the second color
+      ctx.fillStyle = colors[1];
+      ctx.fillRect(width/2, 0, width/2, height);
+    }
+    else {
+      ctx.fillStyle = opts.backgroundColor;
+      ctx.fillRect(0, 0, width, height);
+    }
+
     ctx.fillStyle = opts.color;
 
     let x = opts.padding + opts.marginLeft;
