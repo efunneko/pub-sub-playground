@@ -100,8 +100,9 @@ export class Portal extends StaticObject {
   }
 
   destroy() {
-    this.destroyPortal();
+    this.destroyed = true;
     this.disconnect();
+    this.destroyPortal();
     super.destroy();
   }
 
@@ -183,10 +184,19 @@ export class Portal extends StaticObject {
       return;
     }
 
-    this.brokerConnection.disconnect();
+    this.brokerConnection.dispose();
     this.brokerConnection = null;
     this.connected        = false;
     this.setConnectEffects();
+  }
+
+  // Dispose of the broker connection
+  disposeConnection() {
+    if (this.brokerConnection) {
+      this.disconnect();
+      this.brokerConnection.dispose();
+      this.brokerConnection = null;
+    }
   }
 
   // Called when the connection to the broker is established
@@ -210,7 +220,9 @@ export class Portal extends StaticObject {
     this.brokerConnection = null;
 
     // Schedule a retry in 1 second
-    setTimeout(() => this.manageConnection(), 1000);
+    if (!this.destroyed) {
+      setTimeout(() => this.manageConnection(), 1000);
+    }
   }
 
   // Called when the connection to the broker is lost
@@ -230,8 +242,11 @@ export class Portal extends StaticObject {
     this.queueBound = false;
     this.disconnect();
     this.setConnectEffects();
-    // Set a timer to try to bind again in 1 second
-    setTimeout(() => this.manageConnection(), 1000);
+
+    if (!this.destroyed) {
+      // Set a timer to try to bind again in 1 second
+      setTimeout(() => this.manageConnection(), 1000);
+    }
   }
 
   // Called when there is an error binding to the queue
@@ -243,11 +258,18 @@ export class Portal extends StaticObject {
     this.setConnectEffects();
 
     // Set a timer to try to bind again in 1 second
-    setTimeout(() => this.manageConnection(), 1000);
+    if (!this.destroyed) {
+      setTimeout(() => this.manageConnection(), 1000);
+    }
   }
 
   // Called when a message is received from the broker
   onMessage(topic, message, payload) {
+
+    if (!this.connected) {
+//      return;
+    }
+
     let newObj = payload;
 
     // Set the position of the new object to be just in front of the portal
@@ -548,7 +570,7 @@ export class Portal extends StaticObject {
     if (this.pointLight) {
       return;
     }
-    this.pointLight = new THREE.PointLight(this.color, 0.3, this.app.scale(4));
+    this.pointLight = new THREE.PointLight(this.color, 0.1, this.app.scale(4));
     this.pointLight.position.set(this.app.scale(0.5), 0, this.app.scale(torusRadius/2));
     this.pointLight.decay = 2
     this.group.add(this.pointLight);

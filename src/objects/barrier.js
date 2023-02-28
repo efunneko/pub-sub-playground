@@ -9,9 +9,26 @@ const defaultBarrierDepth  = 100;
 
 export class Barrier extends StaticObject {
   constructor(app, opts) {
-    super(app, opts, [
-      {name: "points", type: "hidden"},
-    ])
+    super(app, opts, 
+      // Parameters
+      [
+        {name: "points", type: "hidden"},
+      ],
+      // UI selection options
+      {
+        moveable:          true,
+        rotatable:         false,
+        selectable:        true,
+        onDown:            (obj, pos, info) => this.onDownBarrier(obj, pos, info),
+        onMove:            (obj, pos, info) => this.onMoveBarrier(obj, pos, info),
+        onUp:              (obj, pos, info) => this.onUpBarrier(obj, pos, info),
+        onSelected:        (obj) => this.onSelectedBarrier(obj),
+        onUnselected:      (obj) => this.onUnselectedBarrier(obj),
+        onDelete:          (obj) => this.onDeleteBarrier(obj),
+        hoverCursor:       "grab",
+        moveCursor:        "grabbing",
+      }
+    )
 
     this.type = "barrier";
 
@@ -23,9 +40,6 @@ export class Barrier extends StaticObject {
 
     // Snap all points to the grid
     this.points = this.points.map(p => this.snapToGridVec2(p));
-
-    // Get the UI Selection Manager
-    this.uis = this.app.ui.getUiSelection();
 
     // Set to false until we are destroyed
     this.destroyed = false;
@@ -118,7 +132,7 @@ export class Barrier extends StaticObject {
       mesh.userData.physicsBody = this.app.getPhysicsEngine().createBox(this, center.x, -center.y, length, defaultBarrierWidth, {isStatic: true, angle: -angle, friction: 0.9, restitution: 0.2});
 
       // Register the object with the UI Selection Manager
-      this.uis.registerMesh(mesh, uisInfo);
+      //this.uis.registerMesh(mesh, uisInfo);
 
       // Draw a cylinder on each point
       this.createCylinder(p1, material, uisInfo);

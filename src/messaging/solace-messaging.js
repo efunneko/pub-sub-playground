@@ -106,6 +106,16 @@ export class SolaceMessaging extends Messaging {
 
   }
 
+  dispose() {
+    super.dispose();
+
+    // Disconnect from Solace messaging
+    if (this.session) {
+      this.session.dispose();
+    }
+
+  }
+
   subscribe(qos, subscription) {
 
     subscription = this.adjustSubscription(subscription);
@@ -146,8 +156,16 @@ export class SolaceMessaging extends Messaging {
     });
     this.messageConsumer.on(solace.MessageConsumerEventName.DOWN, () => {
       if (opts.onDown) opts.onDown()
-      //console.log("MessageConsumer is now down");
+      console.log("MessageConsumer is now down");
     });
+    this.messageConsumer.on(solace.MessageConsumerEventName.DOWN_ERROR, () => {
+      if (opts.onDown) opts.onDown()
+      console.log("MessageConsumer is now down (error)");
+    });
+    // this.messageConsumer.on(solace.MessageConsumerEventName.UNBIND, () => {
+    //   //if (opts.onDown) opts.onDown()
+    //   console.log("MessageConsumer unbound");
+    // });
     this.messageConsumer.on(solace.MessageConsumerEventName.MESSAGE, (message) => {
       // Need to explicitly ack otherwise it will not be deleted from the message router
       this.rxMessage(message.getDestination().getName(), message);

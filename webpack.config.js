@@ -1,4 +1,5 @@
 const path              = require('path');
+const fs                = require('fs');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
@@ -39,7 +40,12 @@ module.exports = {
     //disableHostCheck: true,    
     port: process.env.PORT, // Defaults to 8080
     open: false, // Open the page in browser
-    allowedHosts: ['all'] 
+    allowedHosts: ['all'],
+    https: {
+      key: fs.readFileSync("cert.key"),
+      cert: fs.readFileSync("cert.crt"),
+      ca: fs.readFileSync("ca.crt"),
+    }, 
     //overlay: true,
   },
   devtool: 'inline-source-map',

@@ -2,6 +2,14 @@
 
 import {jst}      from "jayesstee";
 
+// Common event handlers to stop propagation on text input
+const stopPropEvents = {
+  keydown: (e) => e.stopPropagation(),
+  keyup:   (e) => e.stopPropagation(),
+  keypress:(e) => e.stopPropagation(),
+
+};
+
 
 class Input extends jst.Component {
   constructor(app, obj, opts, formInfo) {
@@ -139,7 +147,7 @@ class Text extends Input {
     return super.renderInput(jst.$div(
       {class: "-uiTextInput"},
       jst.$input(
-        {type: "text", title: this.title, size: this.width, value: this.value, ref: "inputRef", events: { change: (e) => this._onChange(this.name, e.target.value)}} 
+        {type: "text", title: this.title, size: this.width, value: this.value, ref: "inputRef", events: { change:   (e) => this._onChange(this.name, e.target.value)}} 
       )
     ));
   }

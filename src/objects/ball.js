@@ -46,6 +46,17 @@ export class Ball extends DynamicObject {
 
     this.setInitialVelocity(opts)
 
+    // Register this object with the UI
+    this.uis.registerMesh(this, {
+      moveable:   true,
+      selectable: true,
+      onMove:     (obj, pos, info) => this.onMove(obj, pos, info),
+      onDown:     (obj, pos, info) => this.onDown(obj, pos, info),
+      onUp:       (obj, pos, info) => this.onUp(obj, pos, info),
+      onDelete:   (obj) => this.removeFromWorld(),
+      object:     this,
+    });
+
   }
 
   create() {

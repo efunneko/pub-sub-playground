@@ -14,12 +14,31 @@
 //  - onUp:              A callback function that is called when the object has the mouse up event
 //  - onSelected:        A callback function that is called when the object has been selected
 //  - onUnselected:      A callback function that is called when the object has been unselected
-// TBD - add support for scaling
-// TBD - add property for settings menu
+//  - configForm:        A form to display when the object is selected
+//  - object:            The object that is being registered
+
+// Selections come in two types:
+//  - Persistent selections: The objects are selected and remain selected
+//     o The selection occurs by either clicking on the object or by dragging a selection box over the object
+//  - Temporary selections:  The objects are selected and unselected when the mouse is released
+//     o The selection occurs by clicking on the object and dragging it
+//     o The object is unselected when the mouse is released
+//     o The object is moved or rotated when the mouse is dragged
+//
+// Persistent selections can be either for a single object or for multiple objects. If multiple objects are selected,
+// then the selection box is shown and the objects can be moved together. The config form contains a UI that lets the user
+// perform alignment operations on the selected objects. If a single object is selected, then the config form is shown
+// for that object with the object's configuration parameters.
+
+// Objects vs Meshes
+// In the context of this class, an object is a moveable object in the scene such as a barrier or a portal. A mesh is a 3D object that
+// is part of the object. A mesh can be clicked on to select the object, however it can have its own callback, which is
+// used for things like rotating an object by clicking on a screwhead
 
 import * as THREE from 'three'
 
 const defaultSelectAllowedRange = 15
+const selectionBoxDepth         = 120
 
 export class UISelection {
   constructor(app, ui, opts) {
@@ -34,7 +53,12 @@ export class UISelection {
       isDragging:     false,
       posAtMouseDown: null,
       rotAtMouseDown: null,
+      boundingBoxes:  [],
+      selectionBox:   null,
     }
+
+    // List of objects that can be selected
+    this.selectableObjects = [];
 
   }
 
@@ -46,26 +70,27 @@ export class UISelection {
     this.camera = camera;
   }
 
+  // Register meshes or objects for selection
+  // The following options are supported:
+
+  // Register an object for selection
+  // It is almost the same as registering a mesh, but it also
+  // adds the object to a list of selectable objects
+  registerObject(object, opts) {
+    this.registerMesh(object, opts);
+    this.selectableObjects.push(object);
+  }
+
+  // Unregister an object
+  unregisterObject(object) {
+    this.unregisterMesh(object);
+    this.selectableObjects = this.selectableObjects.filter((obj) => obj !== object);
+  }
+
   // Register a mesh for selection
   registerMesh(mesh, opts) {
-    let uisInfo = {
-      moveable:         opts.moveable,
-      rotatable:        opts.rotatable,
-      selectable:       opts.selectable,
-      onDown:           opts.onDown,
-      onDelete:         opts.onDelete,
-      onDragStart:      opts.onDragStart,
-      onRotateStart:    opts.onRotateStart,
-      onRotate:         opts.onRotate,
-      onMove:           opts.onMove,
-      onUp:             opts.onUp,
-      onSelected:       opts.onSelected,
-      onUnselected:     opts.onUnselected,
-      selectedMaterial: opts.selectedMaterial,
-      configForm:       opts.configForm,
-      object:           opts.object,
-    };
-
+    let uisInfo = Object.assign({}, opts);
+    
     if (!opts.configForm && opts.object) {
       uisInfo.configForm = {
         save: (form) => opts.object.saveConfigForm(form),
@@ -83,6 +108,7 @@ export class UISelection {
     this.setUisInfo(mesh, null);
   }
 
+
   // Register for specific pointer events
   addPointerEvents(el) {
     // Register all the pointer events
@@ -97,15 +123,38 @@ export class UISelection {
   // Handle the mouse down event
   onDown(e) {
 
+    // Need to know if the shift or control keys are pressed
+    const shiftKey = e.shiftKey;
+    const ctrlKey  = e.ctrlKey;
+
+    // Remember that the mouse is down so we can detect a drag onMove
     this.mouseDown = true;
 
-    // Get the mesh that was clicked on
-    const intersect = this.getMeshIntersectFromEvent(e);
-    if (!intersect) {
+    // If the control key is pressed, then we are moving the camera
+    if (ctrlKey) {
+      this.cameraMoveStart(e);
       return;
     }
 
-    const mesh       = intersect.object;
+    // Get the mesh that was clicked on
+    const intersect = this.getMeshIntersectFromEvent(e);
+
+    // If there is no intersect with a selectable object, then we are starting a selection box and go no further
+
+    // TODO - this is a hack to get around the fact that the selection box is not working
+    if (0 && !intersect.selectable && !intersect.onDown) {
+      this.startSelectionBox(e);
+
+      // If shift is not held down, then unselect all the objects
+      if (!shiftKey) {
+        this.unselectAll();
+      }
+
+      return
+    }
+    
+    const mesh    = intersect.mesh;
+    const uisInfo = mesh && mesh.userData && mesh.userData.uisInfo;
 
     // If there is a persistent selection, then we want to unselect it unless it was clicked on
     if (this.state.persistentSelected && mesh !== this.state.selectedMesh) {
@@ -113,8 +162,7 @@ export class UISelection {
     }
 
     // Only handle the event if the object is selectable
-    if (mesh && mesh.userData && mesh.userData.uisInfo) {
-      const uisInfo = mesh.userData.uisInfo;
+    if (intersect.selectable) {
 
       // Save the mesh that was clicked on
       this.state.selectedMesh = mesh;
@@ -131,11 +179,12 @@ export class UISelection {
         this.state.isDragging     = true;
       }
 
-      // Call the onDown callback if present
-      if (uisInfo.onDown) {
-        this.state.ctrlKey  = e.ctrlKey;
-        uisInfo.onDown(mesh, this.state.posAtMouseDown, this.state);
-      }
+    }
+
+    // Call the onDown callback if present
+    if (uisInfo.onDown) {
+      this.state.ctrlKey  = e.ctrlKey;
+      uisInfo.onDown(mesh, this.state.posAtMouseDown, this.state);
     }
 
   }
@@ -143,44 +192,76 @@ export class UISelection {
   // Handle the mouse up event - note that we only care about the mesh that was clicked on
   onUp(e) {
 
+    this.state.cameraMoving = false;
+
     if (!this.mouseDown) {
       return;
     }
 
-    this.mouseDown = false;
-
-    // Get the mesh that was clicked on
-    const mesh = this.state.selectedMesh;
-
-    if (mesh && mesh.userData && mesh.userData.uisInfo) {
-      const uisInfo = mesh.userData.uisInfo;
-
-      // If the mesh is selectable remember that we have a persistent selection
-      if (uisInfo.selectable && this.state.persistentSelectable) {
-        this.selectMesh(mesh);
-      }
-      else {
-        this.state.selectedMesh = null;
-        this.state.persistentSelected = false;
-      }
-
-      // Call the onUp callback if present
-      if (uisInfo.onUp) {
-        const pos = this.getMousePosGivenZ(e, this.state.posAtMouseDown.z);
-        this.state.ctrlKey = e.ctrlKey;
-        uisInfo.onUp(mesh, pos, this.state);
-      }
-
+    let selectedMeshes;
+    if (this.state.selectionBox) {
+      selectedMeshes = this.getMeshesInSelectionBox();
+      // Draw the bounding boxes around the selected meshes
+      selectedMeshes.forEach((mesh) => {
+        // Remove this for now - perhaps for ever
+        // We really should run the normal selection code for every mesh that is in the selection box, which will add the bounding box
+        //this.drawBoundingBox(mesh);
+      });
     }
 
-    this.state.isDragging     = false;
+    this.clearSelectionBox();
+
+    this.mouseDown = false;
+
+    // If we have any selected meshes, handle them
+    if (!selectedMeshes || selectedMeshes.length == 0) {
+      selectedMeshes = [this.state.selectedMesh];
+    }
+
+    selectedMeshes.forEach((mesh) => {
+
+      if (mesh && mesh.userData && mesh.userData.uisInfo) {
+        const uisInfo = mesh.userData.uisInfo;
+
+        // If the mesh is selectable remember that we have a persistent selection
+        if (this.state.selectedMesh && uisInfo.selectable && this.state.persistentSelectable) {
+          this.selectMesh(mesh);
+        }
+        else {
+          this.state.persistentSelected = false;
+        }
+
+        // Call the onUp callback if present
+        if (uisInfo.onUp) {
+          // TODO - this fails if we are in this loop because of a selection box
+          const pos = this.getMousePosGivenZ(e, this.state.posAtMouseDown.z);
+          this.state.ctrlKey = e.ctrlKey;
+          uisInfo.onUp(mesh, pos, this.state);
+        }
+
+      }
+
+    });
+
+    //this.state.selectedMesh = null;
+    this.state.isDragging   = false;
 
   }
 
   // Handle the mouse move event
   onMove(e) {
 
+    // If we are moving the camera, then do that
+    if (this.state.cameraMoving) {
+      this.cameraMove(e);
+      return;
+    }
+
     if (!this.state.isDragging) {
+      if (this.state.selectionBox) {
+        this.state.selectionBox.end = this.getMousePosGivenZ(e, selectionBoxDepth);
+        this.updateSelectionBox();
+      }
       return;
     }
 
@@ -220,10 +301,77 @@ export class UISelection {
     //}
   }
 
+  // Start the camera move
+  cameraMoveStart(e) {
+    // Remember the mouse position at the start of the move
+    this.state.cameraLastCoords = {x: e.clientX, y: e.clientY};
+    this.state.cameraMoving     = true;
+  }
+
+  // Move the camera
+  cameraMove(e) {
+    //console.log("cameraMove", pos, this.state.cameraLastCoords);
+    const dx  = e.clientX - this.state.cameraLastCoords.x;
+    const dy  = e.clientY - this.state.cameraLastCoords.y;
+
+    //this.app.moveCamera(dx, dy);
+    this.app.moveCamera(-dx, dy);
+    this.state.cameraLastCoords = {x: e.clientX, y: e.clientY};
+  }
+
+  // Start the selection box
+  startSelectionBox(e) {
+
+    const start = this.getMousePosGivenZ(e, selectionBoxDepth);
+    const end   = start;
+    start.z     = 0;
+    this.state.selectionBox = {
+      start: start,
+      end:   end,
+    }
+
+    // Make a list of all the selectable meshes and
+    // create a bounding box for each one. This will be used
+    // to determine if the selection box contains a mesh
+    this.state.selectableObjectsBbox = [];
+
+    console.log("selectableObjects", this.selectableObjects);
+    // Go over all the selectable objects and create a bounding box for each one
+    this.selectableObjects.forEach((mesh) => {
+      const bbox = new THREE.Box3().setFromObject(mesh);
+      bbox.userData = {mesh: mesh};
+      this.state.selectableObjectsBbox.push(bbox);
+    });
+
+  }
+
+  // Unselect all objects
+  unselectAll() {
+    console.log("unselectAll", this.state.persistentSelected, this.state.selectedMesh);
+    // For now, just unselect the selected mesh
+    if (this.state.persistentSelected) {
+      this.unselectMesh(this.state.selectedMesh);
+    }    
+    return;
+
+    if (this.state.selectedMeshes) {
+      this.state.selectedMeshes.forEach((mesh) => {
+        this.unselectMesh(mesh);
+      });
+    }
+    this.state.selectedMeshes = [];
+  }
+
+
   // Select an mesh
   selectMesh(mesh) {
     if (mesh && mesh.userData && mesh.userData.uisInfo) {
       const uisInfo = mesh.userData.uisInfo;
+
+      console.log("selectMesh", mesh, mesh.parent);
+
+      // Draw a box around the mesh
+      //this.drawBoundingBox(mesh);
 
       // Call the onSelected callback if present
       if (uisInfo.onSelected) {
@@ -231,8 +379,9 @@ export class UISelection {
       }
 
       // Remember that this mesh is selected
-      this.state.selectedMesh     = mesh;
+      this.state.selectedMesh       = mesh;
       this.state.persistentSelected = true;
+      console.log("EDE setting persistentSelected", this.state.persistentSelected, this.state.selectedMesh);
 
       // If the mesh has a selected material, then use it
       if (uisInfo.selectedMaterial) {
@@ -319,9 +468,38 @@ export class UISelection {
 
     // Get the intersected mesh
     let intersects = raycaster.intersectObjects(this.scene.children, true);
-    if (intersects.length > 0) {
-      return intersects[0]
+    if (intersects.length == 0) {
+      return {
+        object:     null,
+        mesh:       null,
+        selectable: false,
+        onDown:     null,
+      }
     }
+
+    // Find the first mesh that has uisInfo in its userData by traversing up the tree
+    let mesh = intersects[0].object;
+    console.log("mesh", mesh, intersects[0]);
+    while (mesh) {
+      console.log("checking mesh", mesh, mesh.name, mesh.userData && mesh.userData.uisInfo ? "has uisInfo" : "")
+      if (mesh.userData && mesh.userData.uisInfo) {
+        return {
+          point:      intersects[0].point,
+          object:     mesh.userData.uisInfo.object,
+          mesh:       mesh,
+          selectable: mesh.userData.uisInfo.selectable,
+          onDown:     mesh.userData.uisInfo.onDown,
+        }
+      }
+      mesh = mesh.parent;
+    }
+
+    return {
+      object:     null,
+      selectable: false,
+      onDown:     null,
+    }
+
   }
 
   // This will return the x,y position of the mouse in 3d space given the z
@@ -337,6 +515,7 @@ export class UISelection {
     
     vec.unproject( this.camera );
     
+    console.log("vec", vec, this.camera.position);
     vec.sub( this.camera.position ).normalize();
     
     var distance = (targetZ - this.camera.position.z) / vec.z;
@@ -358,6 +537,129 @@ export class UISelection {
     }
   }
 
+  // Draw a bounding box around the group that the mesh is in. If it
+  // has no parent, then draw a bounding box around the mesh itself
+  drawBoundingBox(mesh) {
+    if (mesh) {
+      let bbox;
+      if (mesh.parent && mesh.parent.type !== "Scene") {
+        bbox = new THREE.Box3().setFromObject(mesh.parent);
+      }
+      else {
+        bbox = new THREE.Box3().setFromObject(mesh);
+      }
+
+      // Add some padding to the bounding box in the x and y directions
+      const padding = 10;
+      bbox.min.x -= padding;
+      bbox.min.y -= padding;
+      bbox.max.x += padding;
+      bbox.max.y += padding;
+      bbox.max.z += padding;
+
+      const boxHelper = new THREE.Box3Helper(bbox, 0xffff00);
+      this.scene.add(boxHelper);
+
+      // Remember the bounding box so we can remove it later
+      this.state.boundingBoxes.push(boxHelper);
+      console.log("drawBoundingBox", this.state.boundingBoxes);
+    }
+  } 
+
+  // Remove all the bounding boxes
+  clearBoundingBoxes() {
+    this.state.boundingBoxes.forEach(box => {
+      this.scene.remove(box);
+    });
+    this.state.boundingBoxes = [];
+  }
+
+  // Update the selection box, drawing a new one if needed
+  updateSelectionBox() {
+
+    // For now, just return
+    return;
+
+    if (!this.state.selectionBox) {
+      return;
+    }
+
+    if (this.state.selectionBox.mesh) {
+      this.scene.remove(this.state.selectionBox.mesh);
+    }
+
+    if (this.state.selectionBox.start && this.state.selectionBox.end) {
+
+      // Create a mesh that is a box between the start and end points
+      const start  = this.state.selectionBox.start;
+      const end    = this.state.selectionBox.end;
+
+      const width  = Math.abs(end.x - start.x);
+      const height = Math.abs(end.y - start.y);
+      const depth  = Math.abs(end.z - start.z);
+
+      const geometry = new THREE.BoxGeometry(width, height, depth);
+      const material = new THREE.MeshBasicMaterial({color: 0xffff00, transparent: true, opacity: 0.5});
+      const mesh     = new THREE.Mesh(geometry, material);
+
+      // Position the mesh
+      mesh.position.x = (start.x + end.x) / 2;
+      mesh.position.y = (start.y + end.y) / 2;
+      mesh.position.z = (start.z + end.z) / 2;
+
+      // Draw the bounding box around the mesh
+      let bbox        = new THREE.Box3().setFromObject(mesh);
+      const boxHelper = new THREE.Box3Helper(bbox, 0xffff00);
+      this.scene.add(boxHelper);
+
+      this.state.selectionBox.mesh = boxHelper;
+
+    }
+  }
+
+  // Remove the selection box
+  clearSelectionBox() {
+    if (!this.state.selectionBox) {
+      return;
+    }
+
+    if (this.state.selectionBox.mesh) {
+      this.scene.remove(this.state.selectionBox.mesh);
+    }
+    this.state.selectionBox = null;
+  }
+
+  // Get the list of meshes that are within the selection box
+  getMeshesInSelectionBox() {
+    console.log("getMeshesInSelectionBox", this.state);
+    const meshes = [];
+    if (this.state.selectionBox.start && this.state.selectionBox.end) {
+      const start = this.state.selectionBox.start;
+      const end   = this.state.selectionBox.end;
+
+      const minX = Math.min(start.x, end.x);
+      const minY = Math.min(start.y, end.y);
+      const minZ = Math.min(start.z, end.z);
+      const maxX = Math.max(start.x, end.x);
+      const maxY = Math.max(start.y, end.y);
+      const maxZ = Math.max(start.z, end.z);
+      
+      // Create a bounding box from the start and end points
+      const bbox = new THREE.Box3(new THREE.Vector3(minX, minY, minZ), new THREE.Vector3(maxX, maxY, maxZ));
+
+      // Loop through all the selectable meshes in the scene that we calculated earlier
+      this.state.selectableObjectsBbox.forEach(meshBbox => {
+        console.log("Checking mesh", meshBbox.userData.mesh)
+        // Check if the x and y of the bounding box are within the selection box
+        if (bbox.min.x <= meshBbox.min.x && meshBbox.max.x <= bbox.max.x && 
+            bbox.min.y <= meshBbox.min.y && meshBbox.max.y <= bbox.max.y) {
+          meshes.push(meshBbox.userData.mesh);
+        }
+
+      });
+    }
+    return meshes;
+  }
 
 }
 

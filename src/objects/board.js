@@ -75,7 +75,7 @@ export class Board extends StaticObject {
 
     // Add it to the scene
     this.group.add(back);
-    
+
   }
 
   createEdge(x1, y1, x2, y2) {
@@ -197,5 +197,6 @@ export class Board extends StaticObject {
     this.saveableConfigChanged();
     this.redraw();
   }
+
 
 }

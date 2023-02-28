@@ -14,6 +14,8 @@ const GLOBAL_PARAMS = [
   {name: "volume",         type: "numberRange", label: "Volume", default: 5, min: 1, max: 10, step: 1},
   {name: "dynamicGravity", type: "boolean",     label: "Dynamic Gravity", title: "On mobile devices, use the device's orientation as the direction of gravity", default: true},      
   {name: "maxCopies",      type: "numberRange", label: "Max Copies", default: 10, min: 1, max: 50, step: 1, title: "The maximum number of copies of each object that can be created"},
+  {name: "cameraX",        type: "hidden",      default: 0},
+  {name: "cameraY",        type: "hidden",      default: 0},
 ];
 
 export class App extends jst.Component {
@@ -277,6 +279,10 @@ export class App extends jst.Component {
 
   getAnimateSeqNum() {
     return this.world.getAnimateSeqNum();
+  }
+
+  moveCamera(deltaX, deltaY) {
+    this.world.moveCamera(deltaX, deltaY);
   }
 
 }

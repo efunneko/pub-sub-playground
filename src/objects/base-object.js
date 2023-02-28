@@ -8,7 +8,7 @@ import * as THREE         from 'three';
 
 
 export class BaseObject {
-  constructor(app, opts, params) {
+  constructor(app, opts, params, uisInfo) {
     this.app  = app
     this.opts = Object.assign({}, opts)
 
@@ -36,10 +36,23 @@ export class BaseObject {
     // Keep track if we moved the object
     this.didMove = false;
 
+    // Get the UI Selection Manager
+    this.uis = this.app.ui.getUiSelection();
+
+    // If we have uisInfo, then register this object with the UI Selection Manager
+    if (uisInfo) {
+      this.uis.registerObject(this.group, uisInfo);
+    }
+
   }
 
   create() {
     this.scene.add(this.group);
+    if (!this.group.userData) {
+      this.group.userData = {};
+    }
+    this.group.userData.object = this;
+    this.group.userData.type   = this.type;
   }
 
   destroy() {

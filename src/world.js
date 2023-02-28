@@ -17,7 +17,6 @@ import {Assets}             from './assets.js';
 import {UI}                 from './ui.js';
 import {utils}              from './utils.js';
 
-
 const usePlanck  = true;
 
 const ObjectTypeToClass = {
@@ -79,12 +78,15 @@ export class World {
     this.scene             = new THREE.Scene()
 
     this.camera            = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 0.1, 3500 )
+    this.camera.position.x = this.app.cameraX;
+    this.camera.position.y = this.app.cameraY;
     this.camera.position.z = 2300
 
     this.renderer = new THREE.WebGLRenderer({antialias: this.app.quality == 'high'})
     //    this.renderer.setPixelRatio( window.devicePixelRatio * 0.8 )
     this.renderer.setSize( window.innerWidth, window.innerHeight )
 
+    // Add the renderer to the DOM
     document.body.appendChild(this.renderer.domElement)
 
     // Lighting
@@ -270,7 +272,9 @@ export class World {
         //this.lastTime = time
       }
     }) 
+
     this.renderer.render(this.scene, this.camera)
+
   }
 
   // Return all the configuration for all the objects
@@ -294,6 +298,9 @@ export class World {
     let foundBoard = false;
     if (config) {
       config.objects.forEach(obj => {
+        if (obj.type === "portaltest") {
+          return;
+        }
         this.addObject(obj.type, obj);
         if (obj.type === "board") {
           foundBoard = true;
@@ -357,6 +364,13 @@ export class World {
     this.gravity = event.accelerationIncludingGravity;
     this.physics.setGravity(this.gravity.y, this.gravity.x);
     this.app.ui.refresh();
+  }
+
+  moveCamera(deltaX, deltaY) {
+    this.camera.position.x += deltaX;
+    this.camera.position.y += deltaY;
+    this.app.cameraX = this.camera.position.x;
+    this.app.cameraY = this.camera.position.y;
   }
   
 
