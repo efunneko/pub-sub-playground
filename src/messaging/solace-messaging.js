@@ -15,6 +15,7 @@ export class SolaceMessaging extends Messaging {
   }
 
   connect() {
+
     let opts = {
       url:      this.url,
       userName: this.username,

@@ -154,6 +154,7 @@ export class BaseObject {
   }
 
   onMove(obj, pos, info) {
+    console.warn("onMove")
     this.x += info.deltaPos.x;
     this.y += info.deltaPos.y;
     this.group.position.set(this.x, this.y, this.z);

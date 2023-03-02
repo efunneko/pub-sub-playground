@@ -27,7 +27,8 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
   init() {
     this.world = planck.World({
       gravity: planck.Vec2(0, this.scale(-500)),
-      allowSleep: this.app.platform.isMobile && this.app.dynamicGravity ? true : false
+      //allowSleep: this.app.platform.isMobile && this.app.dynamicGravity ? true : false
+      allowSleep: true,
     });
 
     // Get collision events
@@ -137,6 +138,9 @@ export class PhysicsWorldPlanck extends PhysicsWorld {
       type:     opts.isStatic ? 'static' : 'dynamic',
       position: planck.Vec2(this.scale(x), this.scale(-y)),
       angle:    -opts.angle || 0,
+      allowSleep: true,
+      linearDamping: 0.1,
+      angularDamping: 0.1,
     })
     body.id = this.nextBodyId++;
     if (opts.onCollision) {

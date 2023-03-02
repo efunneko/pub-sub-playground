@@ -109,6 +109,7 @@ export class UI extends jst.Component {
   }
 
   render() {
+    console.log("UI.render()", this.currConfigForm);
     return jst.$div(
       {
         id: "-ui-container",
@@ -255,7 +256,7 @@ export class UI extends jst.Component {
   }
 
   deleteClicked(e) {
-    this.uis.deleteSelectedMesh();
+    this.uis.deleteSelectedMeshes();
   }
 
   deletePointerUp(e) {

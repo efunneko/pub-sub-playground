@@ -151,7 +151,7 @@ export class Ball extends DynamicObject {
 
   createPhysicsBody() {
     // Create the physics body
-    this.body = this.app.getPhysicsEngine().createCircle(this, this.x, -this.y, this.radius, {restitution: 0.4, friction: 0.8, inertia: 0});
+    this.body = this.app.getPhysicsEngine().createCircle(this, this.x, -this.y, this.radius, {restitution: 0.1, friction: 0.8, inertia: 0});
     return this.body;
   }
 

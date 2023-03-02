@@ -134,6 +134,7 @@ export class Portal extends StaticObject {
   manageConnection() {
     this.setConnectEffects();
     if (this.mode == "broker" && this.enabled && !this.brokerConnection) {
+      console.log("Connecting to broker");
       this.connect();
     }
     else if ((this.mode != "broker" || !this.enabled) && this.brokerConnection) {

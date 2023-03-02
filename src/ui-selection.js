@@ -49,7 +49,7 @@ export class UISelection {
     this.selectAllowedRange = opts.selectAllowedRange || defaultSelectAllowedRange;
     
     this.state = {
-      selectedMesh:   null,
+      selectedMeshes: [],
       isDragging:     false,
       posAtMouseDown: null,
       rotAtMouseDown: null,
@@ -147,7 +147,7 @@ export class UISelection {
 
       // If shift is not held down, then unselect all the objects
       if (!shiftKey) {
-        this.unselectAll();
+        this.unselectMeshes();
       }
 
       return
@@ -156,16 +156,17 @@ export class UISelection {
     const mesh    = intersect.mesh;
     const uisInfo = mesh && mesh.userData && mesh.userData.uisInfo;
 
-    // If there is a persistent selection, then we want to unselect it unless it was clicked on
-    if (this.state.persistentSelected && mesh !== this.state.selectedMesh) {
-      this.unselectMesh(this.state.selectedMesh);
+    // If the mesh is in the list of selected meshes, then don't unselect anything    
+    if (!this.state.selectedMeshes.includes(mesh) && !shiftKey) {
+      console.log("unselecting meshes");
+      this.unselectMeshes();
     }
 
     // Only handle the event if the object is selectable
     if (intersect.selectable) {
 
       // Save the mesh that was clicked on
-      this.state.selectedMesh = mesh;
+      this.state.selectedMeshes.push(mesh);
 
       // Mark this as persistent selectable - it will be set to false if the mouse moves too much
       this.state.persistentSelectable = uisInfo.selectable;
@@ -182,7 +183,7 @@ export class UISelection {
     }
 
     // Call the onDown callback if present
-    if (uisInfo.onDown) {
+    if (uisInfo && uisInfo.onDown) {
       this.state.ctrlKey  = e.ctrlKey;
       uisInfo.onDown(mesh, this.state.posAtMouseDown, this.state);
     }
@@ -215,8 +216,11 @@ export class UISelection {
 
     // If we have any selected meshes, handle them
     if (!selectedMeshes || selectedMeshes.length == 0) {
-      selectedMeshes = [this.state.selectedMesh];
+      selectedMeshes = this.state.selectedMeshes;
     }
+
+    // this.state.selectedMeshes = [];
+    this.unselectMeshes();
 
     selectedMeshes.forEach((mesh) => {
 
@@ -224,11 +228,8 @@ export class UISelection {
         const uisInfo = mesh.userData.uisInfo;
 
         // If the mesh is selectable remember that we have a persistent selection
-        if (this.state.selectedMesh && uisInfo.selectable && this.state.persistentSelectable) {
+        if (uisInfo && uisInfo.selectable && this.state.persistentSelectable) {
           this.selectMesh(mesh);
-        }
-        else {
-          this.state.persistentSelected = false;
         }
 
         // Call the onUp callback if present
@@ -265,33 +266,33 @@ export class UISelection {
       return;
     }
 
-    // Get the mesh that was clicked on
-    const mesh = this.state.selectedMesh;
+    // Determine how far the mouse has moved
+    const pos  = this.getMousePosGivenZ(e, this.state.posAtMouseDown.z);
+    const dx   = pos.x - this.state.posAtMouseDown.x;
+    const dy   = pos.y - this.state.posAtMouseDown.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
 
-    if (mesh && mesh.userData && mesh.userData.uisInfo) {
-      const uisInfo = mesh.userData.uisInfo;
-
-      const pos = this.getMousePosGivenZ(e, this.state.posAtMouseDown.z);
-
-      // If the mesh is selectable, check to see if the mouse has moved too much
-      if (uisInfo.selectable) {
-        const dx = pos.x - this.state.posAtMouseDown.x;
-        const dy = pos.y - this.state.posAtMouseDown.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist > this.selectAllowedRange) {
-          this.state.persistentSelectable = false;
-        }
-      }
-
-      // Call the onMove callback if present
-      if (uisInfo.onMove) {
-        this.state.deltaPos = pos.clone().sub(this.state.prevPos);
-        this.state.ctrlKey  = e.ctrlKey;
-        uisInfo.onMove(mesh, pos, this.state);
-        this.state.prevPos = pos;
-      }
-
+    // If the mouse has moved too far, then we it isn't eligible for a persistent selection
+    if (dist > this.selectAllowedRange) {
+      this.state.persistentSelectable = false;
     }
+
+    // Find the delta position
+    this.state.deltaPos = pos.clone().sub(this.state.prevPos);
+    this.state.ctrlKey  = e.ctrlKey;
+    this.state.prevPos = pos;
+
+    this.state.selectedMeshes.forEach((mesh, i) => {
+      if (mesh && mesh.userData && mesh.userData.uisInfo) {
+        const uisInfo = mesh.userData.uisInfo;
+
+        // Call the onMove callback if present
+        if (uisInfo.onMove) {
+          uisInfo.onMove(mesh, pos, this.state);
+        }
+
+      }
+    })
 
   }
 
@@ -345,25 +346,8 @@ export class UISelection {
 
   }
 
-  // Unselect all objects
-  unselectAll() {
-    console.log("unselectAll", this.state.persistentSelected, this.state.selectedMesh);
-    // For now, just unselect the selected mesh
-    if (this.state.persistentSelected) {
-      this.unselectMesh(this.state.selectedMesh);
-    }    
-    return;
 
-    if (this.state.selectedMeshes) {
-      this.state.selectedMeshes.forEach((mesh) => {
-        this.unselectMesh(mesh);
-      });
-    }
-    this.state.selectedMeshes = [];
-  }
-
-
-  // Select an mesh
+  // Select a specific mesh
   selectMesh(mesh) {
     if (mesh && mesh.userData && mesh.userData.uisInfo) {
       const uisInfo = mesh.userData.uisInfo;
@@ -379,9 +363,7 @@ export class UISelection {
       }
 
       // Remember that this mesh is selected
-      this.state.selectedMesh       = mesh;
-      this.state.persistentSelected = true;
-      console.log("EDE setting persistentSelected", this.state.persistentSelected, this.state.selectedMesh);
+      this.state.selectedMeshes.push(mesh);
 
       // If the mesh has a selected material, then use it
       if (uisInfo.selectedMaterial) {
@@ -389,9 +371,14 @@ export class UISelection {
         mesh.material               = uisInfo.selectedMaterial;
       }
 
-      // If there is a config form, then show it
-      if (uisInfo.configForm) {
+      // If there is a config form and there is only one selected mesh, then show the form
+      console.log("uisInfo.configForm", uisInfo.configForm, this.state.selectedMeshes);
+      if (uisInfo.configForm && this.state.selectedMeshes.length === 1) {
         this.ui.showConfigForm(uisInfo.configForm);
+      }
+      else {
+        this.ui.clearConfigForm();
+        // TODO - create the form that allows grouping and aligning
       }
 
       if (uisInfo.deleteable) {
@@ -401,13 +388,17 @@ export class UISelection {
     }
   }
 
+  // Unselect all selected meshes
+  unselectMeshes() {
+    this.state.selectedMeshes.forEach(mesh => {
+      this.unselectMesh(mesh);
+    });
+    this.state.selectedMeshes = [];
+  }
 
-  // Unselect the mesh
+  // Unselect the mesh - note that this does not take the mesh out of the
+  // selectedMeshes array
   unselectMesh(mesh) {
-
-    if (!mesh) {
-      mesh = this.state.selectedMesh;
-    }
 
     if (mesh && mesh.userData && mesh.userData.uisInfo) {
       const uisInfo = mesh.userData.uisInfo;
@@ -416,10 +407,6 @@ export class UISelection {
       if (uisInfo.onUnselected) {
         uisInfo.onUnselected(mesh);
       }
-
-      // Clear the persistent selection
-      this.state.persistentSelected = false;
-      this.state.selectedMesh     = null;
 
       // If there is a config form, then hide it
       this.ui.clearConfigForm();
@@ -432,25 +419,28 @@ export class UISelection {
   }
 
   // Delete the selected mesh
-  deleteSelectedMesh(force) {
-    const mesh = this.state.selectedMesh;
-    if (mesh && mesh.userData && mesh.userData.uisInfo && (this.state.persistentSelected || force)) {
-      const uisInfo = mesh.userData.uisInfo;
+  deleteSelectedMeshes() {
+    this.state.selectedMeshes.forEach(mesh => {
 
-      this.unselectMesh(mesh);
+      if (mesh && mesh.userData && mesh.userData.uisInfo) {
+        const uisInfo = mesh.userData.uisInfo;
 
-      // Call the onDelete callback if present
-      if (uisInfo.onDelete) {
-        uisInfo.onDelete(mesh);
+        this.unselectMesh(mesh);
+
+        // Call the onDelete callback if present
+        if (uisInfo.onDelete) {
+          uisInfo.onDelete(mesh);
+        }
       }
-    }
+    
+    })
   }
 
   // Called when the pointer up event happens within the delete/trash button
   deletePointerUp(e) {
     // If we are dragging an mesh over the delete button, then delete it
     if (this.state.isDragging) {
-      this.deleteSelectedMesh(true);
+      this.deleteSelectedMeshes();
     }
   }
 
