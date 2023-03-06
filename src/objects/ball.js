@@ -25,7 +25,16 @@ export class Ball extends DynamicObject {
       // {name: "labelColor", type: "color", label: "Label Color"},
       {name: "forceTopic", type: "boolean", label: "Force Topic", title: "Use the configured topic when going through a portal", default: false},
       {name: "topic", type: "text", width: 50, label: "Topic", title: "If Force Topic is true, this topic is used when going through a portal", default: ""},      
-    ]);
+    ],
+    // UI Selection options
+    {
+      moveable:   true,
+      selectable: true,
+      onMove:     (obj, pos, info) => this.onMove(obj, pos, info),
+      onDown:     (obj, pos, info) => this.onDown(obj, pos, info),
+      onUp:       (obj, pos, info) => this.onUp(obj, pos, info),
+      onDelete:   (obj) => this.removeFromWorld(),
+    });
 
     this.type        = "ball"
 
@@ -45,17 +54,6 @@ export class Ball extends DynamicObject {
     })
 
     this.setInitialVelocity(opts)
-
-    // Register this object with the UI
-    this.uis.registerMesh(this, {
-      moveable:   true,
-      selectable: true,
-      onMove:     (obj, pos, info) => this.onMove(obj, pos, info),
-      onDown:     (obj, pos, info) => this.onDown(obj, pos, info),
-      onUp:       (obj, pos, info) => this.onUp(obj, pos, info),
-      onDelete:   (obj) => this.removeFromWorld(),
-      object:     this,
-    });
 
   }
 
@@ -136,17 +134,6 @@ export class Ball extends DynamicObject {
     // Do the same for the physics engine
     mesh.userData.physicsBodies = [this.createPhysicsBody()];
 
-    // Register with the selection manager
-    this.uis.registerMesh(mesh, {
-      moveable:   true,
-      selectable: true,
-      onMove:     (obj, pos, info) => this.onMove(obj, pos, info),
-      onDown:     (obj, pos, info) => this.onDown(obj, pos, info),
-      onUp:       (obj, pos, info) => this.onUp(obj, pos, info),
-      onDelete:   (obj) => this.removeFromWorld(),
-      object:     this,
-    });
-
   }
 
   createPhysicsBody() {
@@ -156,17 +143,20 @@ export class Ball extends DynamicObject {
   }
 
   onMove(obj, pos, info) {
+    if (this.isSubObject) return;
     super.onMove(obj, pos, info);
 
     this.app.getPhysicsEngine().setPosition(this.body, this.group.position.x, -this.group.position.y);
   }
 
   onDown(obj, pos, info) {
+    if (this.isSubObject) return;
     super.onDown(obj, pos, info);
     this.body.setStatic();
   }
 
   onUp(obj, pos, info) {
+    if (this.isSubObject) return;
     this.body.setDynamic();
     this.saveableConfigChanged();
   }

@@ -109,7 +109,6 @@ export class UI extends jst.Component {
   }
 
   render() {
-    console.log("UI.render()", this.currConfigForm);
     return jst.$div(
       {
         id: "-ui-container",
@@ -266,6 +265,11 @@ export class UI extends jst.Component {
   showConfigForm(formInfo) {
     this.currConfigForm = this.generateConfigForm(formInfo);
     this.refresh();
+    //this.refresh();
+  }
+
+  showMultiObjectForm(objects, opts) {
+    this.currConfigForm = new UIAlignmentForm(this, objects, opts);
     this.refresh();
   }
 
@@ -506,3 +510,277 @@ class UIModal extends jst.Component {
     }
   
 }
+
+// Create a JST component for a set of buttons to allow the alignment of
+// a group of objects. There are horizontal and vertical alignment buttons,
+// each with a left, center, and right alignment option.
+// Additionally, there are buttons to distribute the objects evenly, horizontally
+// or vertically.
+class UIAlignmentForm extends jst.Component {
+  constructor(ui, objects, opts) {
+    super();
+    this.ui      = ui;
+    this.objects = objects;
+    this.opts    = opts;
+  }
+
+  cssLocal() {
+    return Object.assign(this.ui.cssLocal(), {
+      uiAlignmentForm$c: {
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        alignItems: "center",
+        height: "100%",
+      },
+      uiAlignmentFormRow$c: {
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        width: "100%",
+      },
+      uiAlignmentFormButton$c: {
+        cursor: "pointer",
+        padding: "5px",
+        margin: "5px",
+        width: "30px",
+        height: "30px",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        borderRadius: "5px",
+        border: "1px solid #ccc",
+        backgroundColor: "#eee",
+      },
+      uiAlignmentFormButton$hover$c: {
+        backgroundColor: "#ddd",
+      },
+      uiAlignmentFormButton$active$c: {
+        backgroundColor: "#ccc",
+      },
+      uiAlignmentFormButton$selected$c: {
+        backgroundColor: "#aaa",
+      },
+      uiAlignmentFormButton$disabled$c: {
+        backgroundColor: "#eee",
+        opacity: 0.5,
+        cursor: "default",
+      },
+    });
+  }
+
+  render() {
+    return jst.$div(
+      {
+        cn: "-uiForm " + "-uiFormColors",
+        events: {
+        }
+      },
+      jst.$div(
+        {
+          cn: "-uiAlignmentFormRow",
+          events: {
+          },
+        },
+        jst.$div(
+          {
+            cn: "-uiAlignmentFormButton",
+            events: {
+              click: e => this.alignLeft(),
+            },
+          },
+          jst.$img({src: "images/icons/align-left.svg"}),
+        ),
+        jst.$div(
+          {
+            cn: "-uiAlignmentFormButton",
+            events: {
+              click: e => this.alignCenter(),
+            },
+          },
+          jst.$img({src: "images/icons/align-center-horizontal.svg"}),
+        ),
+        jst.$div(
+          {
+            cn: "-uiAlignmentFormButton",
+            events: {
+              click: e => this.alignRight(),
+            },
+          },
+          jst.$img({src: "images/icons/align-right.svg"}),
+        ),
+      ),
+      jst.$div(
+        {
+          cn: "-uiAlignmentFormRow",
+          events: {
+          },
+        },
+        jst.$div(
+          {
+            cn: "-uiAlignmentFormButton",
+            events: {
+              click: e => this.alignTop(),
+            },
+          },
+          jst.$img({src: "images/icons/align-top.svg"}),
+        ),
+        jst.$div(
+          {
+            cn: "-uiAlignmentFormButton",
+            events: {
+              click: e => this.alignMiddle(),
+            },
+          },
+          jst.$img({src: "images/icons/align-center-vertical.svg"}),
+        ),
+        jst.$div(
+          {
+            cn: "-uiAlignmentFormButton",
+            events: {
+              click: e => this.alignBottom(),
+            },
+          },
+          jst.$img({src: "images/icons/align-bottom.svg"}),
+        ),
+      ),
+      jst.$div(
+        {
+          cn: "-uiAlignmentFormRow",
+          events: {
+          },
+        },
+        jst.$div(
+          {
+            cn: "-uiAlignmentFormButton",
+            events: {
+              click: e => this.distributeHorizontal(),
+            },
+          },
+          jst.$img({src: "images/icons/distribute-horizontal.svg"}),
+        ),
+        jst.$div(
+          {
+            cn: "-uiAlignmentFormButton",
+            events: {
+              click: e => this.distributeVertical(),
+            },
+          },
+          jst.$img({src: "images/icons/distribute-vertical.svg"}),
+        ),
+      ),
+    );
+  }
+
+  alignLeft() {
+    const minX = this.objects[0].getMinX();
+    this.objects.forEach(object => {
+      object.setMinX(minX);
+    });
+  }
+
+  alignCenter() {
+    const minX = this.objects[0].getMinX();
+    const maxX = this.objects[0].getMaxX();
+    const midX = (minX + maxX) / 2;
+    this.objects.forEach(object => {
+      const width = object.getWidth();
+      object.setMinX(midX - width / 2);
+    });
+  }
+
+  alignRight() {
+    const maxX = this.objects[0].getMaxX();
+    this.objects.forEach(object => {
+      object.setMaxX(maxX);
+    });
+  }
+
+  alignTop() {
+    // Note that the y axis is inverted, so the top of the object is the max y
+    const maxY = this.objects[0].getMaxY();
+    this.objects.forEach(object => {
+      object.setMaxY(maxY);
+    });
+  }
+
+  alignMiddle() {
+    const minY = this.objects[0].getMinY();
+    const maxY = this.objects[0].getMaxY();
+    const midY = (minY + maxY) / 2;
+    this.objects.forEach(object => {
+      const height = object.getHeight();
+      object.setMinY(midY - height / 2);
+    });
+  }
+
+  alignBottom() {
+    // Note that the y axis is inverted, so the bottom of the object is the min y
+    const minY = this.objects[0].getMinY();
+    this.objects.forEach(object => {
+      object.setMinY(minY);
+    });
+  }
+
+  distributeHorizontal() {
+    // Sort the objects by their x position
+    const objects = this.objects.slice();
+    objects.sort((a, b) => a.getMinX() - b.getMinX());
+
+    // Calculate the total width of the objects
+    const totalWidth = objects.reduce((total, object, i) => {
+      console.log("widths: ", total, object.getWidth(), i);
+      return total + object.getWidth();
+    }, 0);
+
+    objects.forEach(object => {
+      console.log("minX: ", object.getMinX(), "maxX: ", object.getMaxX(), "width: ", object.getWidth());
+    });
+
+    // Calculate the total width of the space between the objects
+    const totalSpace = objects[objects.length - 1].getMaxX() - objects[0].getMinX() - totalWidth;
+
+    // Calculate the space between each object
+    const space = totalSpace / (objects.length - 1);
+
+    console.log("totalWidth: ", totalWidth);
+    console.log("totalSpace: ", totalSpace);
+    console.log("space: ", space);
+
+    // Calculate the new x position of each object
+    let x = objects[0].getMinX();
+    objects.forEach(object => {
+      object.setMinX(x);
+      x += object.getWidth() + space;
+    });
+
+  }
+
+  distributeVertical() {
+    // Sort the objects by their y position
+    const objects = this.objects.slice();
+    objects.sort((a, b) => a.getMinY() - b.getMinY());
+
+    // Calculate the total height of the objects
+    const totalHeight = objects.reduce((total, object) => {
+      return total + object.getHeight();
+    }, 0);
+
+    // Calculate the total height of the space between the objects
+    const totalSpace = objects[objects.length - 1].getMaxY() - objects[0].getMinY() - totalHeight;
+
+    // Calculate the space between each object
+    const space = totalSpace / (objects.length - 1);
+
+    // Calculate the new y position of each object
+    let y = objects[0].getMinY();
+    objects.forEach(object => {
+      object.setMinY(y);
+      y += object.getHeight() + space;
+    });
+  }
+
+}
+
+

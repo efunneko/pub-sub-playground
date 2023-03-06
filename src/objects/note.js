@@ -18,7 +18,16 @@ export class Note extends StaticObject {
       {name: "x", type: "hidden"},
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden"},      
-    ]);
+    ],
+    // UI Selection parameters
+    {
+      moveable: true,
+      selectable: true,
+      onMove: (obj, pos, info) => this.onMove(obj, pos, info),
+      onDown: (obj, pos, info) => this.onDown(obj, pos, info),
+      onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
+      onDelete: (obj) => this.removeFromWorld(),
+    });
 
     this.type        = "note";
 
@@ -79,17 +88,6 @@ export class Note extends StaticObject {
 
     //this.z = this.zPos;
     this.group.position.set(this.x, this.y, this.z);
-
-    // Register with the selection manager
-    this.uis.registerMesh(mesh, {
-      moveable: true,
-      selectable: true,
-      onMove: (obj, pos, info) => this.onMove(obj, pos, info),
-      onDown: (obj, pos, info) => this.onDown(obj, pos, info),
-      onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
-      onDelete: (obj) => this.removeFromWorld(),
-      object: this,
-    });
 
   }
 

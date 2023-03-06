@@ -23,7 +23,16 @@ export class Emitter extends StaticObject {
       {name: "shotType", type: "select", label: "Shot Type", options: [{value: "ball", label: "Ball"}, {value: "block", label: "Block"}], default: "ball"},
       {name: "ballForConfig", type: "subObject", label: "Ball Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "ball"},
       {name: "blockForConfig", type: "subObject", label: "Block Config", dependsOn: ["shotType"], showIf: (obj, inputs) => inputs.shotType.getValue() == "block"},
-    ]);
+    ],
+    // UI Selection parameters
+    {
+      moveable: true,
+      selectable: true,
+      onMove: (obj, pos, info) => this.onMove(obj, pos, info),
+      onDown: (obj, pos, info) => this.onDown(obj, pos, info),
+      onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
+      onDelete: (obj) => this.removeFromWorld(),
+    });
 
     this.type         = "emitter";
 
@@ -64,21 +73,9 @@ export class Emitter extends StaticObject {
   create() {
     super.create();
 
-    const uisInfo = {
-      moveable: true,
-      selectable: true,
-      onMove: (obj, pos, info) => this.onMove(obj, pos, info),
-      onDown: (obj, pos, info) => this.onDown(obj, pos, info),
-      onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
-      onSelected: (obj)   => {this.selected = true; this.redraw();},
-      onUnselected: (obj) => {this.selected = false; this.redraw()},
-      onDelete: (obj) => this.removeFromWorld(),
-      object: this,
-    }
-
-    this.createFiringTube(uisInfo);
-    this.createBack(uisInfo);
-    this.createButtons(uisInfo);
+    this.createFiringTube();
+    this.createBack();
+    this.createButtons();
     this.createScrewHeads();
 
     this.group.position.set(this.x, this.y, 50);
@@ -86,7 +83,7 @@ export class Emitter extends StaticObject {
 
   }
 
-  createFiringTube(uisInfo) {
+  createFiringTube() {
 
     // Create the geometry for the main tube
     const geometry = new THREE.CylinderGeometry(tubeRadius, tubeRadius, tubeLength, 32, 32);
@@ -159,7 +156,6 @@ export class Emitter extends StaticObject {
       mainTube.userData.physicsBodies.push(this.physics.createCircle(this, x1, y1, ribRadius, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
   
       this.group.add(rib);
-      this.uis.registerMesh(rib, uisInfo);
       this.ribs.push(rib);
     }
 
@@ -168,11 +164,10 @@ export class Emitter extends StaticObject {
 
     // Add the mesh to the group
     this.group.add(mainTube);
-    this.uis.registerMesh(mainTube, uisInfo);
 
   }
 
-  createBack(uisInfo) {
+  createBack() {
 
     const backLength = tubeRadius * 2.5;
     const backX      = -tubeLength / 4;
@@ -201,8 +196,6 @@ export class Emitter extends StaticObject {
     mesh.receiveShadow = this.useShadows;
 
     this.group.add( mesh ); 
-    this.uis.registerMesh(mesh, uisInfo);
-
 
     // Get coords for the phys bodies that are rotations around this.x, -this.y
     const [x1, y1] = utils.rotatePoint(this.x, -this.y, this.x + backX, -this.y, utils.adjustRotationForPhysics(this.rotation));
@@ -354,10 +347,10 @@ export class Emitter extends StaticObject {
     this.x = x
     this.y = y
 
-    // Set the rotation of the portal to the angle mod 2PI
+    // Set the rotation of the emitter to the angle mod 2PI
     this.rotation = angle % (Math.PI*2)
 
-    // redraw the portal
+    // redraw the emitter
     this.redraw()
 
     //console.log("onMoveScrewHead", screwHead, pos, info)

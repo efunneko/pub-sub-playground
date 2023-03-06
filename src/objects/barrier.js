@@ -22,8 +22,8 @@ export class Barrier extends StaticObject {
         onDown:            (obj, pos, info) => this.onDownBarrier(obj, pos, info),
         onMove:            (obj, pos, info) => this.onMoveBarrier(obj, pos, info),
         onUp:              (obj, pos, info) => this.onUpBarrier(obj, pos, info),
-        onSelected:        (obj) => this.onSelectedBarrier(obj),
-        onUnselected:      (obj) => this.onUnselectedBarrier(obj),
+        //onSelected:        (obj) => this.onSelectedBarrier(obj),
+        //onUnselected:      (obj) => this.onUnselectedBarrier(obj),
         onDelete:          (obj) => this.onDeleteBarrier(obj),
         hoverCursor:       "grab",
         moveCursor:        "grabbing",
@@ -238,6 +238,7 @@ export class Barrier extends StaticObject {
   }
 
   onDownScrewHead(screwHead, pos, info) {
+    this.startNumPoints = this.points.length;
   }
 
   onMoveScrewHead(screwHead, pos, info) {
@@ -245,7 +246,7 @@ export class Barrier extends StaticObject {
     const [x, y] = this.snapToGrid(pos.x, pos.y);
 
     // If this screwhead was not previously selected and it was the first or last screwhead, then we will add a new point
-    if (!info.persistentSelected && (screwHead.parent.userData.index === 0 || screwHead.parent.userData.index === this.points.length - 1)) {
+    if (info.ctrlKey && (screwHead.parent.userData.index === 0 || screwHead.parent.userData.index === this.points.length - 1) && this.startNumPoints === this.points.length) {
       this.addPoint(screwHead, screwHead.parent.userData.index, x, y);
     }
 
@@ -305,6 +306,14 @@ export class Barrier extends StaticObject {
 
   onUpBarrier(obj, pos, info) {
     this.saveableConfigChanged();
+  }
+
+  setPos(x, y) {
+    // Initialize the start points
+    this.startPoints = this.points.map(p => p.clone());
+
+    // Overloading the base setPos function to also update the points
+    this.onMoveBarrier(this, {x: x, y: y}, {ctrlKey: false, posAtMouseDown: {x: this.x, y: this.y}});
   }
 
   addPoint(obj, index, x, y) {

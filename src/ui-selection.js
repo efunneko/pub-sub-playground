@@ -90,17 +90,7 @@ export class UISelection {
   // Register a mesh for selection
   registerMesh(mesh, opts) {
     let uisInfo = Object.assign({}, opts);
-    
-    if (!opts.configForm && opts.object) {
-      uisInfo.configForm = {
-        save: (form) => opts.object.saveConfigForm(form),
-        obj: opts.object,
-        fields: opts.object.getObjectParams(),
-      }
-    }
-
     this.setUisInfo(mesh, uisInfo);
-
   }
 
   // Unregister the mesh
@@ -130,19 +120,18 @@ export class UISelection {
     // Remember that the mouse is down so we can detect a drag onMove
     this.mouseDown = true;
 
-    // If the control key is pressed, then we are moving the camera
-    if (ctrlKey) {
-      this.cameraMoveStart(e);
-      return;
-    }
-
     // Get the mesh that was clicked on
     const intersect = this.getMeshIntersectFromEvent(e);
 
     // If there is no intersect with a selectable object, then we are starting a selection box and go no further
+    if (!intersect.selectable && !intersect.onDown) {
 
-    // TODO - this is a hack to get around the fact that the selection box is not working
-    if (0 && !intersect.selectable && !intersect.onDown) {
+      // If the control key is pressed, then we are moving the camera
+      if (ctrlKey) {
+        this.cameraMoveStart(e);
+        return;
+      }
+
       this.startSelectionBox(e);
 
       // If shift is not held down, then unselect all the objects
@@ -157,16 +146,23 @@ export class UISelection {
     const uisInfo = mesh && mesh.userData && mesh.userData.uisInfo;
 
     // If the mesh is in the list of selected meshes, then don't unselect anything    
-    if (!this.state.selectedMeshes.includes(mesh) && !shiftKey) {
-      console.log("unselecting meshes");
+    const isAlreadySelected = this.state.selectedMeshes.find(m => {
+      const obj1 = this.getObjectFromMesh(m);
+      const obj2 = this.getObjectFromMesh(mesh);
+      return obj1 != null && obj1 === obj2;
+    });
+    if (!isAlreadySelected && !shiftKey) {
+      console.log("EDE unselecting meshes")
       this.unselectMeshes();
     }
 
-    // Only handle the event if the object is selectable
-    if (intersect.selectable) {
+    // Only handle the event if the object is selectable or needs a callback
+    if (intersect.selectable || (uisInfo && uisInfo.onDown)) {
 
       // Save the mesh that was clicked on
-      this.state.selectedMeshes.push(mesh);
+      if (!isAlreadySelected) {
+        this.state.activeMesh = mesh;
+      }
 
       // Mark this as persistent selectable - it will be set to false if the mouse moves too much
       this.state.persistentSelectable = uisInfo.selectable;
@@ -180,12 +176,13 @@ export class UISelection {
         this.state.isDragging     = true;
       }
 
-    }
+      // Call the onDown callback if present
+      this.callOnHandlers([mesh, ...this.state.selectedMeshes], "onDown", this.state.posAtMouseDown, this.state);
+      // if (uisInfo && uisInfo.onDown) {
+      //   this.state.ctrlKey  = e.ctrlKey;
+      //   uisInfo.onDown(mesh, this.state.posAtMouseDown, this.state);
+      // }
 
-    // Call the onDown callback if present
-    if (uisInfo && uisInfo.onDown) {
-      this.state.ctrlKey  = e.ctrlKey;
-      uisInfo.onDown(mesh, this.state.posAtMouseDown, this.state);
     }
 
   }
@@ -201,16 +198,22 @@ export class UISelection {
 
     let selectedMeshes;
     if (this.state.selectionBox) {
+
+      // If the shift key is not pressed, then unselect all the objects
+      if (!e.shiftKey) {
+        this.unselectMeshes();
+      }
+
       selectedMeshes = this.getMeshesInSelectionBox();
-      // Draw the bounding boxes around the selected meshes
-      selectedMeshes.forEach((mesh) => {
-        // Remove this for now - perhaps for ever
-        // We really should run the normal selection code for every mesh that is in the selection box, which will add the bounding box
-        //this.drawBoundingBox(mesh);
-      });
+
+    }
+    else if (this.state.activeMesh) {
+      selectedMeshes = [this.state.activeMesh];
     }
 
     this.clearSelectionBox();
+
+    console.log("onUp", selectedMeshes);
 
     this.mouseDown = false;
 
@@ -219,16 +222,13 @@ export class UISelection {
       selectedMeshes = this.state.selectedMeshes;
     }
 
-    // this.state.selectedMeshes = [];
-    this.unselectMeshes();
-
     selectedMeshes.forEach((mesh) => {
 
       if (mesh && mesh.userData && mesh.userData.uisInfo) {
         const uisInfo = mesh.userData.uisInfo;
 
         // If the mesh is selectable remember that we have a persistent selection
-        if (uisInfo && uisInfo.selectable && this.state.persistentSelectable) {
+        if (uisInfo && uisInfo.selectable) {
           this.selectMesh(mesh);
         }
 
@@ -246,6 +246,7 @@ export class UISelection {
 
     //this.state.selectedMesh = null;
     this.state.isDragging   = false;
+    this.state.activeMesh   = null;
 
   }
 
@@ -282,7 +283,10 @@ export class UISelection {
     this.state.ctrlKey  = e.ctrlKey;
     this.state.prevPos = pos;
 
-    this.state.selectedMeshes.forEach((mesh, i) => {
+    [this.state.activeMesh, ...this.state.selectedMeshes].forEach((mesh, i) => {
+      if (!mesh) {
+        return;
+      }
       if (mesh && mesh.userData && mesh.userData.uisInfo) {
         const uisInfo = mesh.userData.uisInfo;
 
@@ -294,6 +298,18 @@ export class UISelection {
       }
     })
 
+  }
+
+  // Loop over the meshes and call the given handler on each one
+  callOnHandlers(meshes, handlerName, ...args) {
+    meshes.forEach((mesh) => {
+      if (mesh && mesh.userData && mesh.userData.uisInfo) {
+        const uisInfo = mesh.userData.uisInfo;
+        if (uisInfo[handlerName]) {
+          uisInfo[handlerName](mesh, ...args);
+        }
+      }
+    });
   }
 
   onKeyDown(e) {
@@ -331,6 +347,8 @@ export class UISelection {
       end:   end,
     }
 
+    this.state.posAtMouseDown = start.clone();
+
     // Make a list of all the selectable meshes and
     // create a bounding box for each one. This will be used
     // to determine if the selection box contains a mesh
@@ -349,8 +367,17 @@ export class UISelection {
 
   // Select a specific mesh
   selectMesh(mesh) {
+
     if (mesh && mesh.userData && mesh.userData.uisInfo) {
       const uisInfo = mesh.userData.uisInfo;
+
+      // Check if the mesh is already selected
+      if (uisInfo.selected) {
+        return;
+      }
+
+      // Remember that the mesh is selected
+      uisInfo.selected = true;
 
       console.log("selectMesh", mesh, mesh.parent);
 
@@ -376,16 +403,23 @@ export class UISelection {
       if (uisInfo.configForm && this.state.selectedMeshes.length === 1) {
         this.ui.showConfigForm(uisInfo.configForm);
       }
-      else {
+      else if (this.state.selectedMeshes.length > 1) {
         this.ui.clearConfigForm();
-        // TODO - create the form that allows grouping and aligning
+        // Convert the selected meshes into a list of their objects
+        const objects = this.state.selectedMeshes.map(mesh => mesh.userData.uisInfo.object);
+        this.ui.showMultiObjectForm(objects, {});
       }
 
       if (uisInfo.deleteable) {
         this.ui.showDeleteButton();
       }
 
+      if (uisInfo.object) {
+        uisInfo.object.addBoundingBox();
+      }
+
     }
+
   }
 
   // Unselect all selected meshes
@@ -399,6 +433,10 @@ export class UISelection {
   // Unselect the mesh - note that this does not take the mesh out of the
   // selectedMeshes array
   unselectMesh(mesh) {
+
+    if (!mesh && this.state.selectedMeshes.length == 1) {
+      mesh = this.state.selectedMeshes.pop();
+    }
 
     if (mesh && mesh.userData && mesh.userData.uisInfo) {
       const uisInfo = mesh.userData.uisInfo;
@@ -415,7 +453,17 @@ export class UISelection {
       if (uisInfo.unselectedMaterial) {
         mesh.material = uisInfo.unselectedMaterial;
       }
+
+      // Remove the selected flag
+      uisInfo.selected = false;
+
+      // Remove the bounding box
+      if (uisInfo.object) {
+        uisInfo.object.removeBoundingBox();
+      }
+
     }
+
   }
 
   // Delete the selected mesh
@@ -492,6 +540,14 @@ export class UISelection {
 
   }
 
+  // Given a mesh, get the object that is buried in the userData
+  getObjectFromMesh(mesh) {
+    if (mesh && mesh.userData && mesh.userData.uisInfo) {
+      return mesh.userData.uisInfo.object;
+    }
+    return null;
+  }
+
   // This will return the x,y position of the mouse in 3d space given the z
   // It does not use an intersect, but rather a raycast from the camera
   getMousePosGivenZ(event, targetZ) {
@@ -505,7 +561,6 @@ export class UISelection {
     
     vec.unproject( this.camera );
     
-    console.log("vec", vec, this.camera.position);
     vec.sub( this.camera.position ).normalize();
     
     var distance = (targetZ - this.camera.position.z) / vec.z;
@@ -532,11 +587,14 @@ export class UISelection {
   drawBoundingBox(mesh) {
     if (mesh) {
       let bbox;
+      let bboxHoldingMesh;
       if (mesh.parent && mesh.parent.type !== "Scene") {
         bbox = new THREE.Box3().setFromObject(mesh.parent);
+        bboxHoldingMesh = mesh.parent;
       }
       else {
         bbox = new THREE.Box3().setFromObject(mesh);
+        bboxHoldingMesh = mesh;
       }
 
       // Add some padding to the bounding box in the x and y directions
@@ -552,7 +610,7 @@ export class UISelection {
 
       // Remember the bounding box so we can remove it later
       this.state.boundingBoxes.push(boxHelper);
-      console.log("drawBoundingBox", this.state.boundingBoxes);
+      bboxHoldingMesh.userData.boundingBox = boxHelper;
     }
   } 
 
@@ -564,11 +622,26 @@ export class UISelection {
     this.state.boundingBoxes = [];
   }
 
+  clearBoundingBox(mesh) {
+    if (mesh) {
+      // Get the bbox mesh from the passed in mesh's userData
+      if (mesh.parent && mesh.parent.type !== "Scene") {
+        mesh = mesh.parent;
+      }
+      if (mesh.userData && mesh.userData.boundingBox) {
+        this.scene.remove(mesh.userData.boundingBox);
+        // Find and remove the bounding box from the list
+        const index = this.state.boundingBoxes.indexOf(mesh.userData.boundingBox);
+        if (index > -1) {
+          this.state.boundingBoxes.splice(index, 1);
+        }
+        mesh.userData.boundingBox = null;
+      }
+    }
+  }
+
   // Update the selection box, drawing a new one if needed
   updateSelectionBox() {
-
-    // For now, just return
-    return;
 
     if (!this.state.selectionBox) {
       return;

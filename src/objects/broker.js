@@ -21,7 +21,19 @@ export class Broker extends StaticObject {
       {name: "vpnName",  type: "text",     eventLabels: ["connConfig"], label: "Message VPN", default: "default"},
       {name: "username", type: "text",     eventLabels: ["connConfig"], label: "Username", default: "default"},
       {name: "password", type: "password", eventLabels: ["connConfig"], label: "Password", default: "default"},
-    ]);
+    ],
+    // UI Selection parameters
+    {
+      moveable: true,
+      selectable: true,
+      //selectedMaterial: new THREE.MeshStandardMaterial({color: 0x00ff00}),
+      onMove: (obj, pos, info) => this.onMove(obj, pos, info),
+      onDown: (obj, pos, info) => this.onDown(obj, pos, info),
+      onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
+      onSelected: (obj)   => {this.selected = true; this.destroy(); this.create();},
+      onUnselected: (obj) => {this.selected = false; this.destroy(); this.create();},
+      onDelete: (obj) => this.removeFromWorld(),
+    });
 
     this.type = "broker";
 
@@ -41,27 +53,14 @@ export class Broker extends StaticObject {
   create() {
     super.create();
 
-    const uisInfo = {
-      moveable: true,
-      selectable: true,
-      //selectedMaterial: new THREE.MeshStandardMaterial({color: 0x00ff00}),
-      onMove: (obj, pos, info) => this.onMove(obj, pos, info),
-      onDown: (obj, pos, info) => this.onDown(obj, pos, info),
-      onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
-      onSelected: (obj)   => {this.selected = true; this.destroy(); this.create();},
-      onUnselected: (obj) => {this.selected = false; this.destroy(); this.create();},
-      onDelete: (obj) => this.removeFromWorld(),
-      object: this,
-    }
-
-    this.createBroker(uisInfo);
+    this.createBroker();
 
     this.z = 110;
     this.group.position.set(this.x, this.y, this.z);
 
   }
 
-  createBroker(uisInfo) {
+  createBroker() {
 
     // Name plate
     const {texture, height, width} = utils.textToTexture({
@@ -78,7 +77,6 @@ export class Broker extends StaticObject {
     const material = new THREE.MeshStandardMaterial({map: texture});
     const plate = new THREE.Mesh(geometry, material);
     this.group.add(plate);
-    this.uis.registerMesh(plate, uisInfo);
 
     // The base
     const base = new THREE.Mesh(
@@ -97,7 +95,6 @@ export class Broker extends StaticObject {
     base.castShadow    = this.useShadows;
     base.receiveShadow = this.useShadows;
     this.group.add(base);
-    this.uis.registerMesh(base, uisInfo);
 
   }
 

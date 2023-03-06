@@ -44,7 +44,19 @@ export class Portal extends StaticObject {
       {name: "x", type: "hidden"},
       {name: "y", type: "hidden"},
       {name: "rotation", type: "hidden", default: defaultRotation},
-    ])
+    ],
+    // UI Selection Manager Options
+    {
+      moveable: true,
+      selectable: true,
+      onMove: (obj, pos, info) => this.onMove(obj, pos, info),
+      onDown: (obj, pos, info) => this.onDown(obj, pos, info),
+      onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
+      //onSelected: (obj)   => {this.selected = true; this.redraw();},
+      //onUnselected: (obj) => {this.selected = false; this.redraw()},
+      onDelete: (obj)     => this.removeFromWorld(),
+      //object: this,
+    })
 
     this.type                = "portal"
 
@@ -68,7 +80,8 @@ export class Portal extends StaticObject {
   }
 
   createPortal() {
-    const uisInfo = {
+    let uisInfo;
+    const bak = {
       moveable: true,
       selectable: true,
       //selectedMaterial: new THREE.MeshStandardMaterial({color: 0x00ff00}),
@@ -118,12 +131,21 @@ export class Portal extends StaticObject {
         this.group.remove(mesh);
       }
     });
+
+    this.removeBoundingBox();
     
   }
 
   redraw() {
+    let addBbox = false;
+    if (this.boundingBox) {
+      addBbox = true;
+    }
     this.destroyPortal();
     this.createPortal();
+    if (addBbox) {
+      this.addBoundingBox();
+    }
   }
 
   saveConfigForm(form) {
@@ -560,9 +582,6 @@ export class Portal extends StaticObject {
     mesh.userData.physicsBodies.push(this.physics.createCircle(this, x1, y1, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
     mesh.userData.physicsBodies.push(this.physics.createCircle(this, x2, y2, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
     
-    // Register with the selection manager
-    this.uis.registerMesh(mesh, uisInfo);
-
     this.torus = mesh;
 
   }
@@ -599,9 +618,6 @@ export class Portal extends StaticObject {
     this.group.add( mesh ); 
 
     this.mist = mesh;
-
-    // Register with the selection manager
-    this.uis.registerMesh(mesh, uisInfo);
 
   }
 
@@ -717,9 +733,6 @@ export class Portal extends StaticObject {
     mesh.userData.physicsBodies.push(this.physics.createBox(this, x1, y1, btl, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
     mesh.userData.physicsBodies.push(this.physics.createBox(this, x2, y2, btl, ttr, {isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)}));
 
-    // Register with the selection manager
-    this.uis.registerMesh(mesh, uisInfo);
-
   }
 
   createBack(uisInfo) {
@@ -765,9 +778,6 @@ export class Portal extends StaticObject {
     const [x2, y2] = utils.rotatePoint(this.x, -this.y, this.x-btl+10, -this.y, utils.adjustRotationForPhysics(this.rotation));
     this.collisionBody = this.physics.createBox(this, x2, y2, size/8, size*0.95, {onCollision: (body, obj) => this.onCollision(body, obj), isStatic: true, friction: 0.9, restitution: 0.2, angle: utils.adjustRotationForPhysics(this.rotation)});
     mesh.userData.physicsBodies.push(this.collisionBody);
-
-    // Register with the selection manager
-    this.uis.registerMesh(mesh, uisInfo);
 
   }
 
@@ -828,6 +838,8 @@ export class Portal extends StaticObject {
   }
 
   onDownScrewHead(screwHead, pos, info) {
+
+    console.log("onDownScrewHead", screwHead, pos, info)
 
     // First, figure out which screw head is the other one
     const otherScrewHead = this.screwHeads.find((sh) => sh !== screwHead)

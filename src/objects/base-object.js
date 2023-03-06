@@ -40,7 +40,18 @@ export class BaseObject {
     this.uis = this.app.ui.getUiSelection();
 
     // If we have uisInfo, then register this object with the UI Selection Manager
-    if (uisInfo) {
+    if (uisInfo && !opts.isSubObject) {
+      uisInfo.object     = this;
+
+      // Are there any config params that aren't hidden?
+      if (params.filter(param => param.type !== "hidden").length > 0) {
+        uisInfo.configForm = {
+          save:   (form) => this.saveConfigForm(form),
+          obj:    this,
+          fields: this.getObjectParams(),
+        };
+      }
+  
       this.uis.registerObject(this.group, uisInfo);
     }
 
@@ -71,6 +82,10 @@ export class BaseObject {
       this.group.remove(child);
     });
 
+    if (this.boundingBox) {
+      console.log("Removing bounding box");
+      this.removeBoundingBox();
+    }
     this.scene.remove(this.group);
   }
 
@@ -154,7 +169,6 @@ export class BaseObject {
   }
 
   onMove(obj, pos, info) {
-    console.warn("onMove")
     this.x += info.deltaPos.x;
     this.y += info.deltaPos.y;
     this.group.position.set(this.x, this.y, this.z);
@@ -176,25 +190,55 @@ export class BaseObject {
     if (this.redrawOnMove) {
       this.redraw();
     }
+    else {
+      this.adjustBoundingBox();
+    }
   }
 
   onAppearanceChange() {
     this.redraw();
   }
 
+  addBoundingBox() {
+    const bbox      = new THREE.Box3().setFromObject(this.group);
+
+    // Add 10 pixels to the width and height
+    const padding = 10;
+    bbox.expandByScalar(padding);
+
+    const boxHelper = new THREE.Box3Helper(bbox, 0xffff00);
+
+    //mesh.position.set(center.x, center.y, center.z);
+    this.scene.add(boxHelper);
+    this.boundingBox = boxHelper;
+  }
+
+  removeBoundingBox() {
+    if (this.boundingBox) {
+      this.scene.remove(this.boundingBox);
+      this.boundingBox = null;
+    }
+  }
+
+  adjustBoundingBox() {
+    if (this.boundingBox) {
+      this.removeBoundingBox();
+      this.addBoundingBox();
+    }
+  }
+
   redraw() {
     this.destroy();
-    this.create();
+    this.create();    
+    this.adjustBoundingBox();
   }
 
   saveConfigForm(form) {
-    console.warn("saveConfigForm")
     this.setValues(form);
     this.saveableConfigChanged();
   }
 
   saveableConfigChanged() {
-    console.warn("saveableConfigChanged")
     this.app.setPendingSave(true)
   }
 
@@ -202,5 +246,72 @@ export class BaseObject {
     this.app.getWorld().removeObject(this);
     this.saveableConfigChanged();
   }
+
+  getMinX() {
+    const bbox = new THREE.Box3().setFromObject(this.group);
+    return bbox.min.x;
+  }
+
+  getMaxX() {
+    const bbox = new THREE.Box3().setFromObject(this.group);
+    return bbox.max.x;
+  }
+
+  getMinY() {
+    const bbox = new THREE.Box3().setFromObject(this.group);
+    return bbox.min.y;
+  }
+
+  getMaxY() {
+    const bbox = new THREE.Box3().setFromObject(this.group);
+    return bbox.max.y;
+  }
+
+  getWidth() {
+    return this.getMaxX() - this.getMinX();
+  }
+
+  getHeight() {
+    return this.getMaxY() - this.getMinY();
+  }
+
+  getCenter() {
+    const bbox = new THREE.Box3().setFromObject(this.group);
+    return bbox.getCenter();
+  }
+
+  setPos(x, y) {
+    this.x = x;
+    this.y = y;
+    this.group.position.set(this.x, this.y, this.z);
+    if (this.redrawOnMove) {
+      this.redraw();
+    }
+    else {
+      this.adjustBoundingBox();
+    }
+  }
+
+  setMinX(x) {
+    const dx = x - this.getMinX();
+    this.setPos(this.x + dx, this.y);
+  }
+
+  setMaxX(x) {
+    const dx = x - this.getMaxX();
+    this.setPos(this.x + dx, this.y);
+  }
+
+  setMinY(y) {
+    const dy = y - this.getMinY();
+    this.setPos(this.x, this.y + dy);
+  }
+
+  setMaxY(y) {
+    const dy = y - this.getMaxY();
+    this.setPos(this.x, this.y + dy);
+  }
+
+
 
 }

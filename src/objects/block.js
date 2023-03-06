@@ -23,7 +23,18 @@ export class Block extends DynamicObject {
       {name: "topic", type: "text", width: 50, label: "Topic", eventLabels: ["topic"], title: "If Force Topic is true, this topic is used when going through a portal", default: ""},
       {name: "x", type: "hidden", eventLabels: ["position"]},
       {name: "y", type: "hidden", eventLabels: ["position"]},
-    ])
+    ],
+    // UI Selection parameters
+    {
+      moveable: true,
+      selectable: true,
+      onMove: (obj, pos, info) => this.onMove(obj, pos, info),
+      onDown: (obj, pos, info) => this.onDown(obj, pos, info),
+      onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
+      onSelected: (obj) => obj.material = new THREE.MeshStandardMaterial({color: 0xf0e686, emissive: 0x333308}),
+      onUnselected: (obj) => obj.material = new THREE.MeshStandardMaterial({color: 0xf0e6d6, emissive: 0x000000}),
+      onDelete: (obj) => this.removeFromWorld(),
+    })
 
     this.type        = "block"
 
@@ -75,20 +86,6 @@ export class Block extends DynamicObject {
 
     // Do the same for the physics engine
     this.createPhysicsBody();
-
-    // Register with the selection manager
-    this.uis.registerMesh(this.mesh, {
-      moveable: true,
-      selectable: true,
-      //selectedMaterial: new THREE.MeshStandardMaterial({color: 0x00ff00}),
-      onMove: (obj, pos, info) => this.onMove(obj, pos, info),
-      onDown: (obj, pos, info) => this.onDown(obj, pos, info),
-      onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
-      onSelected: (obj) => obj.material = new THREE.MeshStandardMaterial({color: 0xf0e686, emissive: 0x333308}),
-      onUnselected: (obj) => obj.material = new THREE.MeshStandardMaterial({color: 0xf0e6d6, emissive: 0x000000}),
-      onDelete: (obj) => this.removeFromWorld(),
-      object:   this,
-    });
 
   }
 
