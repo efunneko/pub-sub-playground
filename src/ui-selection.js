@@ -152,7 +152,6 @@ export class UISelection {
       return obj1 != null && obj1 === obj2;
     });
     if (!isAlreadySelected && !shiftKey) {
-      console.log("EDE unselecting meshes")
       this.unselectMeshes();
     }
 
@@ -212,8 +211,6 @@ export class UISelection {
     }
 
     this.clearSelectionBox();
-
-    console.log("onUp", selectedMeshes);
 
     this.mouseDown = false;
 
@@ -354,7 +351,6 @@ export class UISelection {
     // to determine if the selection box contains a mesh
     this.state.selectableObjectsBbox = [];
 
-    console.log("selectableObjects", this.selectableObjects);
     // Go over all the selectable objects and create a bounding box for each one
     this.selectableObjects.forEach((mesh) => {
       const bbox = new THREE.Box3().setFromObject(mesh);
@@ -379,8 +375,6 @@ export class UISelection {
       // Remember that the mesh is selected
       uisInfo.selected = true;
 
-      console.log("selectMesh", mesh, mesh.parent);
-
       // Draw a box around the mesh
       //this.drawBoundingBox(mesh);
 
@@ -399,7 +393,6 @@ export class UISelection {
       }
 
       // If there is a config form and there is only one selected mesh, then show the form
-      console.log("uisInfo.configForm", uisInfo.configForm, this.state.selectedMeshes);
       if (uisInfo.configForm && this.state.selectedMeshes.length === 1) {
         this.ui.showConfigForm(uisInfo.configForm);
       }
@@ -517,9 +510,7 @@ export class UISelection {
 
     // Find the first mesh that has uisInfo in its userData by traversing up the tree
     let mesh = intersects[0].object;
-    console.log("mesh", mesh, intersects[0]);
     while (mesh) {
-      console.log("checking mesh", mesh, mesh.name, mesh.userData && mesh.userData.uisInfo ? "has uisInfo" : "")
       if (mesh.userData && mesh.userData.uisInfo) {
         return {
           point:      intersects[0].point,
@@ -694,7 +685,6 @@ export class UISelection {
 
   // Get the list of meshes that are within the selection box
   getMeshesInSelectionBox() {
-    console.log("getMeshesInSelectionBox", this.state);
     const meshes = [];
     if (this.state.selectionBox.start && this.state.selectionBox.end) {
       const start = this.state.selectionBox.start;
@@ -712,7 +702,6 @@ export class UISelection {
 
       // Loop through all the selectable meshes in the scene that we calculated earlier
       this.state.selectableObjectsBbox.forEach(meshBbox => {
-        console.log("Checking mesh", meshBbox.userData.mesh)
         // Check if the x and y of the bounding box are within the selection box
         if (bbox.min.x <= meshBbox.min.x && meshBbox.max.x <= bbox.max.x && 
             bbox.min.y <= meshBbox.min.y && meshBbox.max.y <= bbox.max.y) {

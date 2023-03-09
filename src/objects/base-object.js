@@ -66,7 +66,7 @@ export class BaseObject {
     this.group.userData.type   = this.type;
   }
 
-  destroy() {
+  destroy(opts = {}) {
 
     // Clone the children array so we can iterate over it
     const children = this.group.children.slice(0);
@@ -82,8 +82,7 @@ export class BaseObject {
       this.group.remove(child);
     });
 
-    if (this.boundingBox) {
-      console.log("Removing bounding box");
+    if (!opts.keepBoundingBox) {
       this.removeBoundingBox();
     }
     this.scene.remove(this.group);
@@ -199,18 +198,29 @@ export class BaseObject {
     this.redraw();
   }
 
+  getBoundingBox() {
+    const bbox = new THREE.Box3().setFromObject(this.group);
+    return bbox;
+  }
+
   addBoundingBox() {
-    const bbox      = new THREE.Box3().setFromObject(this.group);
+    const bbox      = this.getBoundingBox();
 
     // Add 10 pixels to the width and height
     const padding = 10;
     bbox.expandByScalar(padding);
 
+    bbox.min.z = 10;
+
     const boxHelper = new THREE.Box3Helper(bbox, 0xffff00);
+
+    // Make the box3helper 50% transparent
+    boxHelper.material.transparent = true;
+    boxHelper.material.opacity     = 0.7;
 
     //mesh.position.set(center.x, center.y, center.z);
     this.scene.add(boxHelper);
-    this.boundingBox = boxHelper;
+    this.boundingBox = boxHelper;    
   }
 
   removeBoundingBox() {
@@ -228,7 +238,7 @@ export class BaseObject {
   }
 
   redraw() {
-    this.destroy();
+    this.destroy({keepBoundingBox: true});
     this.create();    
     this.adjustBoundingBox();
   }
@@ -248,22 +258,22 @@ export class BaseObject {
   }
 
   getMinX() {
-    const bbox = new THREE.Box3().setFromObject(this.group);
+    const bbox = this.getBoundingBox();
     return bbox.min.x;
   }
 
   getMaxX() {
-    const bbox = new THREE.Box3().setFromObject(this.group);
+    const bbox = this.getBoundingBox();
     return bbox.max.x;
   }
 
   getMinY() {
-    const bbox = new THREE.Box3().setFromObject(this.group);
+    const bbox = this.getBoundingBox();
     return bbox.min.y;
   }
 
   getMaxY() {
-    const bbox = new THREE.Box3().setFromObject(this.group);
+    const bbox = this.getBoundingBox();
     return bbox.max.y;
   }
 
@@ -276,7 +286,7 @@ export class BaseObject {
   }
 
   getCenter() {
-    const bbox = new THREE.Box3().setFromObject(this.group);
+    const bbox = this.getBoundingBox();
     return bbox.getCenter();
   }
 

@@ -41,6 +41,7 @@ export class DynamicObject extends BaseObject {
   onPositionChange() {
     this.group.position.x = this.x
     this.group.position.y = this.y
+    this.adjustBoundingBox()
   }
 
   // Event handler for rotation changes

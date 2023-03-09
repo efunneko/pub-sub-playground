@@ -33,7 +33,10 @@ export class Barrier extends StaticObject {
     this.type = "barrier";
 
     // The snap grid size
-    this.snapSize = opts.snapSize || 10;
+    this.snapSize = opts.snapSize || 1;
+
+    // How close the screwheads must be before they are collapsed
+    this.screwCollapseDistance = opts.screwCollapseDistance || 10;
 
     // Barriers are made up of a list of 2d points
     this.points = opts.points || [{x: 0, y: 0}, {x: 100, y: 0}];
@@ -60,8 +63,8 @@ export class Barrier extends StaticObject {
     this.createBarrier();
   }
 
-  destroy() {
-    super.destroy();    
+  destroy(opts = {}) {
+    super.destroy(opts);    
     this.destroyed = true;
   }
 
@@ -77,26 +80,6 @@ export class Barrier extends StaticObject {
       metalness:    0,
       roughness:    1,
     });
-
-    // If barrier is selected, then add an emissive color
-    if (this.barrierSelected) {
-      material.emissive = new THREE.Color(0x333308);
-    }
-
-    // Selection properties for all objects in the barrier
-    const uisInfo = {
-      moveable:          true,
-      rotatable:         false,
-      selectable:        true,
-      onDown:            (obj, pos, info) => this.onDownBarrier(obj, pos, info),
-      onMove:            (obj, pos, info) => this.onMoveBarrier(obj, pos, info),
-      onUp:              (obj, pos, info) => this.onUpBarrier(obj, pos, info),
-      onSelected:        (obj) => this.onSelectedBarrier(obj),
-      onUnselected:      (obj) => this.onUnselectedBarrier(obj),
-      onDelete:          (obj) => this.onDeleteBarrier(obj),
-      hoverCursor:       "grab",
-      moveCursor:        "grabbing",
-    };
   
     // For each pair of points, draw a box between them
     // The box will be centered on the center point between the two points
@@ -131,16 +114,13 @@ export class Barrier extends StaticObject {
       // And add the physics block too
       mesh.userData.physicsBody = this.app.getPhysicsEngine().createBox(this, center.x, -center.y, length, defaultBarrierWidth, {isStatic: true, angle: -angle, friction: 0.9, restitution: 0.2});
 
-      // Register the object with the UI Selection Manager
-      //this.uis.registerMesh(mesh, uisInfo);
-
       // Draw a cylinder on each point
-      this.createCylinder(p1, material, uisInfo);
+      this.createCylinder(p1, material);
       
       prevPoint = p2;
     }
 
-    this.createCylinder(prevPoint, material, uisInfo);
+    this.createCylinder(prevPoint, material);
 
     // Add a screw head at each point
     this.points.forEach((point, i) => {
@@ -154,7 +134,7 @@ export class Barrier extends StaticObject {
 
   }
 
-  createCylinder(p, material, uisInfo) {
+  createCylinder(p, material) {
     const cylinderDepth = defaultBarrierDepth*1.005;
     let cylinder    = new THREE.CylinderGeometry(defaultBarrierWidth/2, defaultBarrierWidth/2, cylinderDepth, 16);
     let mesh        = new THREE.Mesh(cylinder, material);
@@ -171,9 +151,6 @@ export class Barrier extends StaticObject {
 
     mesh.userData.physicsBody = this.app.getPhysicsEngine().createCircle(this, p.x, -p.y, defaultBarrierWidth/2, {isStatic: true, friction: 0.9, restitution: 0.2});
     mesh.userData.type        = "barrier";
-
-    // Register the object with the UI Selection Manager
-    this.uis.registerMesh(mesh, uisInfo);
 
   }
 
@@ -342,7 +319,13 @@ export class Barrier extends StaticObject {
       if (i === 0) {
         return true;
       }
-      return !p.equals(this.points[i-1]);
+      // Get the distance between the two points
+      const dist = p.distanceTo(this.points[i-1]);
+      // If the distance is less than the collapse distance, then we will collapse the points
+      if (dist < this.screwCollapseDistance) {
+        return false;
+      }
+      return true;      
     });
   }
 
@@ -359,8 +342,9 @@ export class Barrier extends StaticObject {
   }
 
   recreateBarrier() { 
-    this.destroy()
+    this.destroy({keepBoundingBox: true})
     this.create()
+    this.adjustBoundingBox()
   }
  
 }

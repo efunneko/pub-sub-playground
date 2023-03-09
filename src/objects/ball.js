@@ -145,7 +145,6 @@ export class Ball extends DynamicObject {
   onMove(obj, pos, info) {
     if (this.isSubObject) return;
     super.onMove(obj, pos, info);
-
     this.app.getPhysicsEngine().setPosition(this.body, this.group.position.x, -this.group.position.y);
   }
 
@@ -167,5 +166,15 @@ export class Ball extends DynamicObject {
     }
     super.onAppearanceChange();
   }
+
+  getBoundingBox() {
+    // Get the bounding box of the ball by using the radius
+    const radius = this.radius;
+    return new THREE.Box3(
+      new THREE.Vector3(this.x - radius, this.y - radius, this.group.position.z - radius), 
+      new THREE.Vector3(this.x + radius, this.y + radius, this.group.position.z + radius)
+    );
+  }
+
 
 }

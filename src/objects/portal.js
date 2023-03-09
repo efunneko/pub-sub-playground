@@ -112,14 +112,14 @@ export class Portal extends StaticObject {
 
   }
 
-  destroy() {
+  destroy(opts = {}) {
     this.destroyed = true;
     this.disconnect();
-    this.destroyPortal();
+    this.destroyPortal(opts);
     super.destroy();
   }
 
-  destroyPortal() {
+  destroyPortal(opts = {}) {
     // Loop through the meshes and remove the physics bodies and the meshes from the group
     const children = [].concat(this.group.children);
     children.forEach(mesh => {
@@ -132,20 +132,16 @@ export class Portal extends StaticObject {
       }
     });
 
-    this.removeBoundingBox();
+    if (!opts.keepBoundingBox) {
+      this.removeBoundingBox();
+    }
     
   }
 
   redraw() {
-    let addBbox = false;
-    if (this.boundingBox) {
-      addBbox = true;
-    }
-    this.destroyPortal();
+    this.destroyPortal({keepBoundingBox: true});
     this.createPortal();
-    if (addBbox) {
-      this.addBoundingBox();
-    }
+    this.adjustBoundingBox();
   }
 
   saveConfigForm(form) {
