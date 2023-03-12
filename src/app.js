@@ -250,6 +250,34 @@ export class App extends jst.Component {
     return maxId + 1;
 
   }
+
+  // Return a new unique object id
+  getNewObjectId() {
+    // If we don't already have a next id, find it. The next ID is saved so that
+    // we don't have to search for it every time we create a new object.
+    if (!this.nextObjectId) {
+      console.log("Finding next object id");
+      const objects = this.world.getObjects();
+      // Look for the first unused object id by finding the largest id and adding 1
+      let maxId = 0;
+      objects.forEach(obj => {
+        if (obj.object.id > maxId) {
+          maxId = obj.object.id;
+        }
+      });
+      this.nextObjectId = maxId + 1;
+      console.log("Next object id is " + this.nextObjectId);
+    }
+    return this.nextObjectId++;
+  }
+
+  createObjectGroup(objects) {
+    return this.world.createObjectGroup(objects);
+  }
+
+  destroyObjectGroup(group) {
+    this.world.destroyObjectGroup(group);
+  }
   
   getPortalsUsingBroker(broker) {
     return this.world.getPortalsUsingBroker(broker);

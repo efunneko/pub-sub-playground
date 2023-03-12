@@ -57,9 +57,6 @@ export class UISelection {
       selectionBox:   null,
     }
 
-    // List of objects that can be selected
-    this.selectableObjects = [];
-
   }
 
   setScene(scene) {
@@ -78,13 +75,13 @@ export class UISelection {
   // adds the object to a list of selectable objects
   registerObject(object, opts) {
     this.registerMesh(object, opts);
-    this.selectableObjects.push(object);
+    // Mark this object as globally selectable
+    object.userData.uisInfo.globallySelectable = true;
   }
 
   // Unregister an object
   unregisterObject(object) {
     this.unregisterMesh(object);
-    this.selectableObjects = this.selectableObjects.filter((obj) => obj !== object);
   }
 
   // Register a mesh for selection
@@ -142,7 +139,7 @@ export class UISelection {
       return
     }
     
-    const mesh    = intersect.mesh;
+    const mesh    = this.getMeshOrObjectGroup(intersect.mesh);
     const uisInfo = mesh && mesh.userData && mesh.userData.uisInfo;
 
     // If the mesh is in the list of selected meshes, then don't unselect anything    
@@ -351,11 +348,13 @@ export class UISelection {
     // to determine if the selection box contains a mesh
     this.state.selectableObjectsBbox = [];
 
-    // Go over all the selectable objects and create a bounding box for each one
-    this.selectableObjects.forEach((mesh) => {
-      const bbox = new THREE.Box3().setFromObject(mesh);
-      bbox.userData = {mesh: mesh};
-      this.state.selectableObjectsBbox.push(bbox);
+    // Go over all the groups in the scene and find ones that are globally selectable
+    this.scene.children.forEach((group) => {
+      if (group.userData && group.userData.uisInfo && group.userData.uisInfo.globallySelectable) {      
+        const bbox = new THREE.Box3().setFromObject(group);
+        bbox.userData = {mesh: group};
+        this.state.selectableObjectsBbox.push(bbox);
+      }
     });
 
   }
@@ -365,7 +364,14 @@ export class UISelection {
   selectMesh(mesh) {
 
     if (mesh && mesh.userData && mesh.userData.uisInfo) {
-      const uisInfo = mesh.userData.uisInfo;
+      let uisInfo = mesh.userData.uisInfo;
+
+      // Check if the mesh is in an object group
+      const objectGroup = this.getObjectGroupForMesh(mesh);
+      if (objectGroup) {
+        mesh    = objectGroup.getMesh();
+        uisInfo = mesh.userData.uisInfo;
+      }
 
       // Check if the mesh is already selected
       if (uisInfo.selected) {
@@ -421,6 +427,7 @@ export class UISelection {
       this.unselectMesh(mesh);
     });
     this.state.selectedMeshes = [];
+    this.ui.clearConfigForm();
   }
 
   // Unselect the mesh - note that this does not take the mesh out of the
@@ -455,6 +462,9 @@ export class UISelection {
         uisInfo.object.removeBoundingBox();
       }
 
+      // Remove from the selected meshes array
+      this.state.selectedMeshes = this.state.selectedMeshes.filter(m => m !== mesh);
+
     }
 
   }
@@ -475,6 +485,7 @@ export class UISelection {
       }
     
     })
+    this.state.selectedMeshes = [];
   }
 
   // Called when the pointer up event happens within the delete/trash button
@@ -711,6 +722,36 @@ export class UISelection {
       });
     }
     return meshes;
+  }
+
+  // Get the object group that the mesh is in - it might be in a group that is in a group
+  getObjectGroupForMesh(mesh) {
+    let objectGroup = null;
+    if (mesh && mesh.userData && mesh.userData.uisInfo && mesh.userData.uisInfo.object) {
+      objectGroup = mesh.userData.uisInfo.object.getObjectGroup();
+      if (objectGroup && !objectGroup.objectIds) {
+        mesh.userData.uisInfo.object.setObjectGroup(null);
+        return null;
+      }
+    }
+
+    while (objectGroup) {
+      if (objectGroup.objectGroupId) {
+        objectGroup = objectGroup.getObjectGroup();
+      }
+      else {
+        break;
+      }
+    }
+    return objectGroup;
+  }
+
+  getMeshOrObjectGroup(mesh) {
+    let objectGroup = this.getObjectGroupForMesh(mesh);
+    if (objectGroup) {
+      return objectGroup.getMesh();
+    }
+    return mesh;
   }
 
 }

@@ -269,7 +269,7 @@ export class UI extends jst.Component {
   }
 
   showMultiObjectForm(objects, opts) {
-    this.currConfigForm = new UIAlignmentForm(this, objects, opts);
+    this.currConfigForm = new UIMultiObjectForm(this.app, this, objects, opts);
     this.refresh();
   }
 
@@ -516,9 +516,12 @@ class UIModal extends jst.Component {
 // each with a left, center, and right alignment option.
 // Additionally, there are buttons to distribute the objects evenly, horizontally
 // or vertically.
-class UIAlignmentForm extends jst.Component {
-  constructor(ui, objects, opts) {
+// This component also has a button to group the objects into a single object and
+// a button to ungroup the objects.
+class UIMultiObjectForm extends jst.Component {
+  constructor(app, ui, objects, opts) {
     super();
+    this.app     = app;
     this.ui      = ui;
     this.objects = objects;
     this.opts    = opts;
@@ -526,21 +529,21 @@ class UIAlignmentForm extends jst.Component {
 
   cssLocal() {
     return Object.assign(this.ui.cssLocal(), {
-      uiAlignmentForm$c: {
+      uiForm$c: {
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
         alignItems: "center",
         height: "100%",
       },
-      uiAlignmentFormRow$c: {
+      uiFormRow$c: {
         display: "flex",
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
         width: "100%",
       },
-      uiAlignmentFormButton$c: {
+      uiFormButton$c: {
         cursor: "pointer",
         padding: "5px",
         margin: "5px",
@@ -553,16 +556,19 @@ class UIAlignmentForm extends jst.Component {
         border: "1px solid #ccc",
         backgroundColor: "#eee",
       },
-      uiAlignmentFormButton$hover$c: {
+      uiFormButtonWide$c: {
+        width: "50px",
+      },
+      uiFormButton$hover$c: {
         backgroundColor: "#ddd",
       },
-      uiAlignmentFormButton$active$c: {
+      uiFormButton$active$c: {
         backgroundColor: "#ccc",
       },
-      uiAlignmentFormButton$selected$c: {
+      uiFormButton$selected$c: {
         backgroundColor: "#aaa",
       },
-      uiAlignmentFormButton$disabled$c: {
+      uiFormButton$disabled$c: {
         backgroundColor: "#eee",
         opacity: 0.5,
         cursor: "default",
@@ -579,13 +585,13 @@ class UIAlignmentForm extends jst.Component {
       },
       jst.$div(
         {
-          cn: "-uiAlignmentFormRow",
+          cn: "-uiFormRow",
           events: {
           },
         },
         jst.$div(
           {
-            cn: "-uiAlignmentFormButton",
+            cn: "-uiFormButton",
             events: {
               click: e => this.alignLeft(),
             },
@@ -594,7 +600,7 @@ class UIAlignmentForm extends jst.Component {
         ),
         jst.$div(
           {
-            cn: "-uiAlignmentFormButton",
+            cn: "-uiFormButton",
             events: {
               click: e => this.alignCenter(),
             },
@@ -603,7 +609,7 @@ class UIAlignmentForm extends jst.Component {
         ),
         jst.$div(
           {
-            cn: "-uiAlignmentFormButton",
+            cn: "-uiFormButton",
             events: {
               click: e => this.alignRight(),
             },
@@ -613,13 +619,13 @@ class UIAlignmentForm extends jst.Component {
       ),
       jst.$div(
         {
-          cn: "-uiAlignmentFormRow",
+          cn: "-uiFormRow",
           events: {
           },
         },
         jst.$div(
           {
-            cn: "-uiAlignmentFormButton",
+            cn: "-uiFormButton",
             events: {
               click: e => this.alignTop(),
             },
@@ -628,7 +634,7 @@ class UIAlignmentForm extends jst.Component {
         ),
         jst.$div(
           {
-            cn: "-uiAlignmentFormButton",
+            cn: "-uiFormButton",
             events: {
               click: e => this.alignMiddle(),
             },
@@ -637,7 +643,7 @@ class UIAlignmentForm extends jst.Component {
         ),
         jst.$div(
           {
-            cn: "-uiAlignmentFormButton",
+            cn: "-uiFormButton",
             events: {
               click: e => this.alignBottom(),
             },
@@ -647,13 +653,13 @@ class UIAlignmentForm extends jst.Component {
       ),
       jst.$div(
         {
-          cn: "-uiAlignmentFormRow",
+          cn: "-uiFormRow",
           events: {
           },
         },
         jst.$div(
           {
-            cn: "-uiAlignmentFormButton",
+            cn: "-uiFormButton",
             events: {
               click: e => this.distributeHorizontal(),
             },
@@ -662,12 +668,37 @@ class UIAlignmentForm extends jst.Component {
         ),
         jst.$div(
           {
-            cn: "-uiAlignmentFormButton",
+            cn: "-uiFormButton",
             events: {
               click: e => this.distributeVertical(),
             },
           },
           jst.$img({src: "images/icons/distribute-vertical.svg"}),
+        ),
+      ),
+      jst.$div(
+        {
+          cn: "-uiFormRow",
+          events: {
+          },
+        },
+        jst.$div(
+          {
+            cn: "-uiFormButton -uiFormButtonWid",
+            events: {
+              click: e => this.groupObjects(),
+            },
+          },
+          jst.$img({src: "images/icons/object-group-solid.svg", title: "Group objects"}),
+        ),
+        jst.$div(
+          {
+            cn: "-uiFormButton -uiFormButtonWid",
+            events: {
+              click: e => this.ungroupObjects(),
+            },
+          },
+          jst.$img({src: "images/icons/object-ungroup.svg", title: "Ungroup objects"}),
         ),
       ),
     );
@@ -778,6 +809,21 @@ class UIAlignmentForm extends jst.Component {
     objects.forEach(object => {
       object.setMinY(y);
       y += object.getHeight() + space;
+    });
+  }
+
+  groupObjects() {
+    let objectGroup = this.app.createObjectGroup(this.objects);
+    this.ui.uis.selectMesh(objectGroup.getMesh());
+    // Unselect the objects
+    this.objects.forEach(object => {
+      this.ui.uis.unselectMesh(object.getMesh());
+    })
+  }
+
+  ungroupObjects() {
+    this.objects.forEach(object => {
+      this.app.destroyObjectGroup(object);
     });
   }
 

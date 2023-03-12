@@ -6,15 +6,23 @@
 import {ObjectParams}     from './object-params.js'
 import * as THREE         from 'three';
 
+const BBOX_COLOR            = 0xffff00;
+const BBOX_COLOR_IN_GROUP   = 0xaaddff;
+const BBOX_OPACITY          = 0.7;
+const BBOX_OPACITY_IN_GROUP = 0.3;
 
 export class BaseObject {
   constructor(app, opts, params, uisInfo) {
     this.app  = app
     this.opts = Object.assign({}, opts)
 
+    // Add an object parameter for the objectGroupId and id
+    params.push({name: "objectGroupId", type: "hidden", default: 0});
+    params.push({name: "id",            type: "hidden", default: 0});
+
     // The object parameters
     this.objectParams = new ObjectParams(this, params, opts);
-
+//this.objectGroupId = 0;
     // Threejs scene for 3d rendering
     this.scene  = opts.scene;
 
@@ -35,6 +43,9 @@ export class BaseObject {
 
     // Keep track if we moved the object
     this.didMove = false;
+
+    // Give this object a unique id
+    this.id = opts.id || this.app.getNewObjectId();
 
     // Get the UI Selection Manager
     this.uis = this.app.ui.getUiSelection();
@@ -141,6 +152,10 @@ export class BaseObject {
     return config;
   }
 
+  getMesh() {
+    return this.group;
+  }
+
   getValue(paramName) {
     return this.objectParams.getValue(this, paramName);
   }
@@ -204,6 +219,9 @@ export class BaseObject {
   }
 
   addBoundingBox() {
+    if (this.boundingBox) {
+      return;
+    }
     const bbox      = this.getBoundingBox();
 
     // Add 10 pixels to the width and height
@@ -212,11 +230,12 @@ export class BaseObject {
 
     bbox.min.z = 10;
 
-    const boxHelper = new THREE.Box3Helper(bbox, 0xffff00);
+    const boxHelper = new THREE.Box3Helper(bbox, BBOX_COLOR);
 
     // Make the box3helper 50% transparent
     boxHelper.material.transparent = true;
-    boxHelper.material.opacity     = 0.7;
+    boxHelper.material.opacity     = this.objectGroupId ? BBOX_OPACITY_IN_GROUP : BBOX_OPACITY;
+    boxHelper.material.color.setHex(this.objectGroupId ? BBOX_COLOR_IN_GROUP : BBOX_COLOR);
 
     //mesh.position.set(center.x, center.y, center.z);
     this.scene.add(boxHelper);
@@ -255,6 +274,23 @@ export class BaseObject {
   removeFromWorld() {
     this.app.getWorld().removeObject(this);
     this.saveableConfigChanged();
+  }
+
+  setObjectGroup(group) {
+    this.objectGroup   = group;
+    this.objectGroupId = group ? group.id : 0;
+    // If this is going into a group, make the bounding box mostly transparent
+    if (this.boundingBox) {
+      this.boundingBox.material.opacity     = this.objectGroupId ? BBOX_OPACITY_IN_GROUP : BBOX_OPACITY;
+      this.boundingBox.material.color.setHex(this.objectGroupId ? BBOX_COLOR_IN_GROUP : BBOX_COLOR);
+    }
+  }
+
+  getObjectGroup() {
+    if (this.objectGroupId && !this.objectGroup) {
+      this.objectGroup = this.app.getWorld().getObjectById(this.objectGroupId);
+    }
+    return this.objectGroup;
   }
 
   getMinX() {
@@ -302,24 +338,28 @@ export class BaseObject {
     }
   }
 
+  setPosWithDelta(dx, dy) {
+    this.setPos(this.x + dx, this.y + dy);
+  }
+
   setMinX(x) {
     const dx = x - this.getMinX();
-    this.setPos(this.x + dx, this.y);
+    this.setPosWithDelta(dx, 0);
   }
 
   setMaxX(x) {
     const dx = x - this.getMaxX();
-    this.setPos(this.x + dx, this.y);
+    this.setPosWithDelta(dx, 0);
   }
 
   setMinY(y) {
     const dy = y - this.getMinY();
-    this.setPos(this.x, this.y + dy);
+    this.setPosWithDelta(0, dy);
   }
 
   setMaxY(y) {
     const dy = y - this.getMaxY();
-    this.setPos(this.x, this.y + dy);
+    this.setPosWithDelta(0, dy);
   }
 
 

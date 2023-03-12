@@ -10,6 +10,7 @@ import {Barrier}            from './objects/barrier.js'
 import {Note}               from './objects/note.js'
 import {Broker}             from './objects/broker.js'
 import {Emitter}            from './objects/emitter.js'
+import {Group}              from './objects/group.js'
 import {PhysicsWorld}       from './physics/physics-world.js'
 import {PhysicsWorldMatter} from './physics/physics-world-matter.js';
 import {PhysicsWorldPlanck} from './physics/physics-world-planck.js';
@@ -28,6 +29,7 @@ const ObjectTypeToClass = {
   'note':    Note,
   'broker':  Broker,
   'emitter': Emitter,
+  'group':   Group,
 };
 
 export class World {
@@ -183,7 +185,12 @@ export class World {
   cloneObject(obj, ephemeral) {
     // Get the config for this object
     let config = obj.getBeforeMoveConfig();
-    
+
+    // We don't want unique info
+    delete config.id;
+    delete config.objectGroupId;
+    delete config.objectGroup;
+
     // Create a new object with the same config
     let newObj = this.addObject(config.type, config, null, ephemeral);
     return newObj;
@@ -204,6 +211,22 @@ export class World {
       this.objectsByGuid[guid] = this.objectsByGuid[guid] ? (this.objectsByGuid[guid]+1) : 1;
     }
     return obj;
+  }
+
+  // This will create a new 'group' object that will contain all of the 
+  // passed in objects
+  createObjectGroup(objects) {
+    let group = this.addObject('group', {});
+    objects.forEach(o => {
+      group.addObject(o);
+    });
+    return group;
+  }
+
+  destroyObjectGroup(group) {
+    if (group instanceof Group) {
+      group.destroy();
+    }
   }
 
   removeObjectByGuid(guid) {
@@ -298,7 +321,7 @@ export class World {
     let foundBoard = false;
     if (config) {
       config.objects.forEach(obj => {
-        if (obj.type === "portaltest") {
+        if (obj.type === "grouptest") {
           return;
         }
         this.addObject(obj.type, obj);
@@ -320,6 +343,19 @@ export class World {
 
   getBrokers() {
     return this.objects.filter(o => o.type === "broker").map(o => o.object);
+  }
+
+  getObjects() {
+    return this.objects;
+  }
+
+  getObjectById(id) {
+    console.log("Objects:", this.objects);
+    let entry = this.objects.find(o => o.object.id === id);
+    if (entry) {
+      return entry.object;
+    }
+    return null;
   }
 
   getPortalsUsingBroker(broker) {
