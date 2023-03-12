@@ -402,7 +402,7 @@ export class UISelection {
       if (uisInfo.configForm && this.state.selectedMeshes.length === 1) {
         this.ui.showConfigForm(uisInfo.configForm);
       }
-      else if (this.state.selectedMeshes.length > 1) {
+      else if (this.state.selectedMeshes.length > 1 || (uisInfo.object && uisInfo.object.isGroup)) {
         this.ui.clearConfigForm();
         // Convert the selected meshes into a list of their objects
         const objects = this.state.selectedMeshes.map(mesh => mesh.userData.uisInfo.object);

@@ -304,9 +304,11 @@ export class UI extends jst.Component {
     return div;
   }
 
-  clearConfigForm() {
+  clearConfigForm(doUnselect = false) {
     this.currConfigForm = undefined;
-    this.uis.unselectMesh();
+    if (doUnselect) {
+      this.uis.unselectMesh();
+    }
     this.refresh();
   }
 
@@ -320,11 +322,11 @@ export class UI extends jst.Component {
     if (formInfo.save) {
       formInfo.save(values);
     }
-    this.clearConfigForm();
+    this.clearConfigForm(true);
   }
 
   cancelConfigForm(formInfo) {
-    this.clearConfigForm();
+    this.clearConfigForm(true);
   }
 
   setScene(scene) {
@@ -813,12 +815,12 @@ class UIMultiObjectForm extends jst.Component {
   }
 
   groupObjects() {
-    let objectGroup = this.app.createObjectGroup(this.objects);
-    this.ui.uis.selectMesh(objectGroup.getMesh());
     // Unselect the objects
     this.objects.forEach(object => {
       this.ui.uis.unselectMesh(object.getMesh());
     })
+    let objectGroup = this.app.createObjectGroup(this.objects);
+    this.ui.uis.selectMesh(objectGroup.getMesh());
   }
 
   ungroupObjects() {

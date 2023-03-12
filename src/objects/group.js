@@ -26,13 +26,18 @@ export class Group extends StaticObject {
 
     // The objects in the group - will learn the actual objects later
     this.objects = []
+
+    this.isGroup = true;
+
   }
 
   // Destroy the group - note that this does not destroy the objects in the group, it just
   // disbands the group
   destroy() {
+    this.uis.unselectMesh(this.getMesh());
     this.getObjects().forEach(obj => {
       obj.setObjectGroup(null);
+      this.uis.selectMesh(obj.getMesh());
     })
     this.objects = [];
     this.app.setPendingSave(true)
