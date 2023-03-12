@@ -21,7 +21,7 @@ export class Barrier extends StaticObject {
         selectable:        true,
         onDown:            (obj, pos, info) => this.onDownBarrier(obj, pos, info),
         onMove:            (obj, pos, info) => this.onMoveBarrier(obj, pos, info),
-        onUp:              (obj, pos, info) => this.onUpBarrier(obj, pos, info),
+        onUp:              (obj, pos, info) => this.onUp(obj, pos, info),
         //onSelected:        (obj) => this.onSelectedBarrier(obj),
         //onUnselected:      (obj) => this.onUnselectedBarrier(obj),
         onDelete:          (obj) => this.onDeleteBarrier(obj),

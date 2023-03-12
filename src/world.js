@@ -152,7 +152,7 @@ export class World {
     }    
   }
 
-  addObject(type, opts, guid, ephemeral) {
+  addObject(type, opts = {}, guid, ephemeral) {
 
     if (!guid) {
       guid = utils.guid();
@@ -350,7 +350,6 @@ export class World {
   }
 
   getObjectById(id) {
-    console.log("Objects:", this.objects);
     let entry = this.objects.find(o => o.object.id === id);
     if (entry) {
       return entry.object;

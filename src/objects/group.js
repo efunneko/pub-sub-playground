@@ -15,7 +15,7 @@ export class Group extends StaticObject {
     ],
     {
       onMove: (obj, pos, info) => this.onMove(obj, pos, info),
-      onUp:   (obj, pos, info) => this.onHandler('onUp', obj, pos, info),
+      onUp:   (obj, pos, info) => this.onUp(obj, pos, info),
       onDown: (obj, pos, info) => this.onHandler('onDown', obj, pos, info),
       onSelected: (obj) => this.onSelected(obj),
       onUnselected: (obj) => this.onUnselected(obj),
@@ -80,6 +80,20 @@ export class Group extends StaticObject {
         }
       }
     })
+  }
+
+  onUp(obj, pos, info) {
+    // During the move, duplicates of the contained object might have been created
+    let objects = this.getObjects();
+    console.log('Group.onUp', objects[0].duplicate);
+    if (objects[0] && objects[0].duplicate) {
+      // All the contained objects have been duplicated, so we need to duplicate the group
+      let newGroup = this.app.getWorld().addObject('group');
+      objects.forEach(obj => {
+        newGroup.addObject(obj.duplicate);
+      })
+    }
+    this.onHandler('onUp', obj, pos, info);
   }
 
   onMove(obj, pos, info) {
