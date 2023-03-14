@@ -14,7 +14,6 @@ export class Broker extends StaticObject {
     super(app, opts, [
       {name: "x", type: "hidden", eventLabels: ["position"]},
       {name: "y", type: "hidden", eventLabels: ["position"]},
-      {name: "id",       type: "hidden",   default: 0},
       {name: "name",     type: "text",     eventLabels: ["name"], label: "Name", default: "Broker"},
       {name: "protocol", type: "select",   eventLabels: ["connConfig"], label: "Protocol", options: [{value: "smf", label: "SMF"}, {value: "mqtt", label: "MQTT"}], default: "smf"},
       {name: "url",      type: "text",     eventLabels: ["connConfig"], label: "Broker URL", default: "ws://<host>:<port>"},
@@ -37,10 +36,10 @@ export class Broker extends StaticObject {
 
     this.type = "broker";
 
-    // Get a unique ID for this broker
-    if (!this.id) {
-      this.id = app.getNewBrokerId();
-    }
+    // // Get a unique ID for this broker
+    // if (!this.id) {
+    //   this.id = app.getNewBrokerId();
+    // }
 
     this.uis    = app.ui.getUiSelection();
 

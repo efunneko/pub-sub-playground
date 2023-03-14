@@ -100,9 +100,6 @@ export class Ball extends DynamicObject {
       texture = textTexture.texture;
 
     }
-    else {
-      texture = Assets.textures.stainlessSteelTexture.albedo;
-    }
 
     const material = new THREE.MeshStandardMaterial({
       map:               texture,
