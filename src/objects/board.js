@@ -14,10 +14,10 @@ export class Board extends StaticObject {
   constructor(app, opts) {
     super(app, opts, [
       // Object parameters
-      {name: "x1", type: "hidden", eventLabels: ["position"]},
-      {name: "y1", type: "hidden", eventLabels: ["position"]},
-      {name: "x2", type: "hidden", eventLabels: ["position"]},
-      {name: "y2", type: "hidden", eventLabels: ["position"]},
+      {name: "x1", type: "hidden"},
+      {name: "y1", type: "hidden"},
+      {name: "x2", type: "hidden"},
+      {name: "y2", type: "hidden"},
     ]);
 
     this.type = "board"

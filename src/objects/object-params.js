@@ -129,7 +129,7 @@ export class ObjectParams {
           return;
       }
 
-      if (typeof(obj[paramName]) != 'object' && obj[paramName] === value) {
+      if (typeof(obj[paramName]) != 'object' && obj[paramName] === value || utils.isEqual(obj[paramName], value)) {
         return;
       }
 

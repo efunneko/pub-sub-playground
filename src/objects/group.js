@@ -51,6 +51,11 @@ export class Group extends StaticObject {
     this.app.setPendingSave(true)
   }
 
+  // Just skip redraw
+  redraw() {
+    this.adjustBoundingBox();
+  }
+
   // Remove an object from the group
   removeObject(obj) {
     this.objects = this.objects.filter(o => o !== obj);
@@ -90,7 +95,6 @@ export class Group extends StaticObject {
   onUp(obj, pos, info) {
     // During the move, duplicates of the contained object might have been created
     let objects = this.getObjects();
-    console.log('Group.onUp', objects[0].duplicate);
     if (objects[0] && objects[0].duplicate) {
       // All the contained objects have been duplicated, so we need to duplicate the group
       let newGroup = this.app.getWorld().addObject('group');
@@ -134,6 +138,29 @@ export class Group extends StaticObject {
     })
     this.adjustBoundingBox();
   }
+
+  // In the past there was a bug with deleting groups that left groups around, but the grouped
+  // objects did not refer back to them. This function fixes that problem
+  auditAndCleanup() {
+    let objects = this.getObjects();
+    if (objects.length == 0) {
+      console.log('Group.auditAndCleanup - destroying empty group');
+      this.app.world.removeObject(this);
+    } else {
+      let newIds = [];
+      objects.forEach(obj => {
+        if (obj.objectGroupId == this.id) {
+          newIds.push(obj.id);
+        }
+      })
+      console.log('Group.auditAndCleanup - removing', objects.length - newIds.length, 'objects from group');
+      this.objectIds = newIds;
+      if (this.objects.length == 0) {
+        this.app.world.removeObject(this);
+      }
+    }
+  }
+
 
 }
 

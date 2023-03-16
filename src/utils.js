@@ -286,6 +286,13 @@ export let utils = {
     return JSON.parse(JSON.stringify(obj));
   },
 
+  // Return true if the passed in object or array is equal to the other
+  // object or array
+  isEqual: (obj1, obj2) => {
+    console.log('isEqual: ' + JSON.stringify(obj1) + ' ' + JSON.stringify(obj2));
+    return JSON.stringify(obj1) === JSON.stringify(obj2);
+  },
+
   getComplementaryColor: (color) => {
     const lookup = {
       'red': 'white',

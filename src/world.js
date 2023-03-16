@@ -225,7 +225,7 @@ export class World {
 
   destroyObjectGroup(group) {
     if (group instanceof Group) {
-      group.destroy();
+      this.removeObject(group);
     }
   }
 
@@ -335,6 +335,14 @@ export class World {
       this.addObject("board", {x1: -500, y1: -300, x2: 500, y2: 300});
     }
 
+    // There were issues with cleaning up groups in the past, so 
+    // clean them up now
+    this.objects.forEach(o => {
+      if (o.type === "group") {
+        o.object.auditAndCleanup();
+      }
+    })
+ 
   }
 
   // Undo changes based on the passed in state

@@ -135,7 +135,7 @@ export class Note extends StaticObject {
 
     const ballMaterial = new THREE.MeshStandardMaterial({
       map:          Assets.textures.brass.albedo,
-      roughnessMap: Assets.textures.brass.rough,
+      roughnessMap: Assets.textures.brass.roughness,
       metalnessMap: Assets.textures.brass.metallic,      
       normalMap:    Assets.textures.brass.normal,
       envMap:            Assets.textures.envMap,

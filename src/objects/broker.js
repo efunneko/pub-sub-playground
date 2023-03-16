@@ -12,9 +12,9 @@ const brokerHeight       = 0.4
 export class Broker extends StaticObject {
   constructor(app, opts) {
     super(app, opts, [
-      {name: "x", type: "hidden", eventLabels: ["position"]},
-      {name: "y", type: "hidden", eventLabels: ["position"]},
-      {name: "name",     type: "text",     eventLabels: ["name"], label: "Name", default: "Broker"},
+      {name: "x", type: "hidden"},
+      {name: "y", type: "hidden"},
+      {name: "name",     type: "text",     label: "Name", default: "Broker"},
       {name: "protocol", type: "select",   eventLabels: ["connConfig"], label: "Protocol", options: [{value: "smf", label: "SMF"}, {value: "mqtt", label: "MQTT"}], default: "smf"},
       {name: "url",      type: "text",     eventLabels: ["connConfig"], label: "Broker URL", default: "ws://<host>:<port>"},
       {name: "vpnName",  type: "text",     eventLabels: ["connConfig"], label: "Message VPN", default: "default"},
@@ -82,7 +82,7 @@ export class Broker extends StaticObject {
       utils.createRoundedBoxGeometry(width + 10, this.height + 10, 10, 5, 8),
       new THREE.MeshPhysicalMaterial({
         map:               Assets.textures.brass.albedo,
-        roughnessMap:      Assets.textures.brass.rough,
+        roughnessMap:      Assets.textures.brass.roughness,
         metalnessMap:      Assets.textures.brass.metallic,      
         normalMap:         Assets.textures.brass.normal,
         envMap:            Assets.textures.envMap,
