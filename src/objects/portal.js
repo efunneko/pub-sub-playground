@@ -31,7 +31,7 @@ export class Portal extends StaticObject {
     super(app, opts, [
       {name: "name", type: "text", label: "Name", default: "Unnamed Portal"},
       {name: "portalId", type: "text", label: "Portal ID", default: "1"},
-      {name: "enabled", type: "boolean", label: "Enabled", default: true},
+      {name: "enabled", type: "boolean", label: "Enabled", default: true, eventLabels: ["enabled"]},
       {name: "mode", type: "select", label: "Portal Mode", default: "broker", options: [{value: "broker", label: "Connect to Broker"}, {value: "void", label: "Send to Void"}]},
       {name: "broker", type: "hidden"},
       {name: "brokerId", type: "select", label: "Broker", dependsOn: ["mode"], showIf: isBrokerMode, options: () => this.app.getBrokers().map(b => { return {value: b.getId(), label: b.getName()}})},
@@ -246,8 +246,12 @@ export class Portal extends StaticObject {
 
   // Called when the connection to the broker is lost
   onDisconnect(connection) {
+    this.brokerConnection = null;
     this.connected = false;
     this.setConnectEffects();
+    if (!this.destroyed) {
+      setTimeout(() => this.manageConnection(), 1000);
+    }
   }
 
   // Called when the queue binding is up
@@ -885,6 +889,11 @@ export class Portal extends StaticObject {
   onDownOnOffButton(mesh, pos, info) {
     // Toggle the enabled state
     this.enabled = !this.enabled;
+    this.manageConnection();
+  }
+
+  onEnabledChange() {
+    console.log("onEnabledChanged", this.enabled)
     this.manageConnection();
   }
 

@@ -145,6 +145,13 @@ export class BaseObject {
     return config;
   }
 
+  setConfig(config) {
+    let changed = this.objectParams.setValues(this, config);
+    if (changed) {
+      this.redraw();
+    }
+  }
+
   getBeforeMoveConfig() {
     let config = this.getConfig();
     config.x = this.startMoveX;

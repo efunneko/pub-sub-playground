@@ -337,6 +337,47 @@ export class World {
 
   }
 
+  // Undo changes based on the passed in state
+  // This will intelligently find the differences between the current state
+  // and the passed in state and undo the changes
+  undo(undoConfig) {
+    let config = this.getConfig();
+    let objects = config.objects;
+    let undoObjects = undoConfig.objects;
+
+    // First, remove any objects that are in the current state but not in the undo state
+    objects.forEach(obj => {
+      let undoObj = undoObjects.find(o => o.id === obj.id);
+      if (!undoObj) {
+        let o = this.getObjectById(obj.id);
+        if (o) {
+          this.removeObject(o);
+        }
+      }
+    })
+
+    // Now, add any objects that are in the undo state but not in the current state
+    undoObjects.forEach(obj => {
+      let currentObj = objects.find(o => o.id === obj.id);
+      if (!currentObj) {
+        this.addObject(obj.type, obj);
+      }
+    })
+
+    // Now, update any objects that are in both the current and undo states
+    // but only ones that have changed.
+    objects.forEach(obj => {
+      let undoObj = undoObjects.find(o => o.id === obj.id);
+      if (undoObj) {
+        let o = this.getObjectById(obj.id);
+        if (o) {
+          o.setConfig(undoObj);
+        }
+      }
+    })
+
+  }
+
   setMaxCopies(maxCopies) {
     this.maxCopies = maxCopies;
   }
@@ -358,7 +399,11 @@ export class World {
   }
 
   getPortalsUsingBroker(broker) {
-    return this.objects.filter(o => o.type === "portal" && o.object.getValue("broker") === broker.getValue("name")).map(o => o.object);
+    let portals = this.objects.filter(o => o.type === "portal" && `${o.object.getValue("brokerId")}` === `${broker.getValue("id")}`).map(o => o.object);
+    if (portals.length === 0) {
+      portals = this.objects.filter(o => o.type === "portal" && o.object.getValue("broker") === broker.getValue("name")).map(o => o.object);
+    }
+    return portals;
   }
 
   getAnimateSeqNum() {

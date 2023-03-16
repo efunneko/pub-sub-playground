@@ -307,6 +307,10 @@ export class UISelection {
   }
 
   onKeyDown(e) {
+    // Handle CTRL-Z for undo
+    if (e.ctrlKey && e.key === "z") {
+      this.app.undo();
+    }
     //if (e.key === "Delete" || e.key === "Backspace") {
     //  this.deleteSelectedMesh();
     //}

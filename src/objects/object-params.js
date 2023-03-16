@@ -64,6 +64,8 @@
 //              on.  If any of the parameters in the array are changed,
 //              the parameter will be updated.
 
+import { utils } from "../utils.js";
+
 export class ObjectParams {
   constructor(obj, params, initialValues) {
 
@@ -114,8 +116,10 @@ export class ObjectParams {
   }
 
   // Set the parameter values given an object and the map of parameter names and values
+  // Returns true if any of the values were changed
   setValues(obj, values) {
     const eventLabels = {};
+    let changed = false;
     Object.keys(values).forEach(paramName => {
       const value = values[paramName];
       const param = this.paramMap[paramName];
@@ -125,6 +129,11 @@ export class ObjectParams {
           return;
       }
 
+      if (typeof(obj[paramName]) != 'object' && obj[paramName] === value) {
+        return;
+      }
+
+      changed = true;
       obj[paramName] = value;      
       if (this.paramEventLabels[paramName]) {
         this.paramEventLabels[paramName].forEach(label => {
@@ -139,6 +148,8 @@ export class ObjectParams {
         obj[label]();
       }
     });
+
+    return changed
 
   }
 
@@ -158,6 +169,12 @@ export class ObjectParams {
     this.params.forEach(param => {
       if (param.type == "subObject") {
         config[param.name] = obj[param.name].getConfig();
+      }
+      else if (Array.isArray(obj[param.name])) {
+        config[param.name] = utils.serdes(obj[param.name]);
+      }
+      else if (typeof(obj[param.name]) == "object") {
+        config[param.name] = utils.serdes(obj[param.name]);
       }
       else {
         let val = obj[param.name];

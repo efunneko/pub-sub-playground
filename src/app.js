@@ -3,6 +3,7 @@ import {Body}                  from "./body";
 import {UI}                    from "./ui";
 import {World}                 from "./world.js"
 import {Platform}              from "./platform.js"
+import {Sessions}              from "./sessions.js"
 import {ObjectParams}          from "./objects/object-params.js"
 import * as LZString           from "lz-string";
 
@@ -45,6 +46,9 @@ export class App extends jst.Component {
     this.body               = new Body(this, this.width, this.height, this.fontScale);
 
     this.world              = new World(this, {ui: this.ui})
+
+    this.sessions           = new Sessions(this);
+    this.sessions.loadSessions();
 
     this.pendingSave        = false
 
@@ -89,12 +93,16 @@ export class App extends jst.Component {
   }
   
   // Get all the config from the world and save it in local storage
-  saveConfig() {
-    let config = {
+  getConfigForSave() {
+    return {
       version:          1,
       world:            this.world.getConfig(),
       globalSettings:   this.globalParams.getConfig(this),
     };
+  }
+
+  saveConfig() {
+    let config = this.getConfigForSave();
 
     // Get the JSON string of the config
     const json = JSON.stringify(config);
@@ -174,6 +182,7 @@ export class App extends jst.Component {
     } else {
       this.ui.setPendingSave(val);
     }
+    this.saveUndo();
   }
 
   play() {
@@ -189,6 +198,27 @@ export class App extends jst.Component {
     this.world.pause();
     if (this.eventListeners.pause) {
       this.eventListeners.pause.forEach(handler => handler());
+    }
+  }
+
+  undo() {
+    let config = this.sessions.getNextUndo();
+    if (config) {
+      // Tell the world to do the undo
+      this.world.undo(config);
+    }
+  }
+
+  saveUndo() {
+    // If not already running, set a timer to update the undo stack
+    // This is to accumulate a bunch of changes into a single undo step
+    if (!this.undoTimer) {
+      this.undoTimer = setTimeout(() => {
+        this.undoTimer = null;
+        // Get the current state of the world and add it to the undo stack
+        let config = this.world.getConfig()
+        this.sessions.addToUndoStack(config);
+      }, 100);
     }
   }
 
@@ -256,7 +286,6 @@ export class App extends jst.Component {
     // If we don't already have a next id, find it. The next ID is saved so that
     // we don't have to search for it every time we create a new object.
     if (!this.nextObjectId) {
-      console.log("Finding next object id");
       const objects = this.world.getObjects();
       // Look for the first unused object id by finding the largest id and adding 1
       let maxId = 0;
@@ -266,7 +295,6 @@ export class App extends jst.Component {
         }
       });
       this.nextObjectId = maxId + 1;
-      console.log("Next object id is " + this.nextObjectId);
     }
     return this.nextObjectId++;
   }

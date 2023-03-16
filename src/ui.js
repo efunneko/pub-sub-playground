@@ -17,6 +17,9 @@ export class UI extends jst.Component {
 
     // State - can be: 'playing', 'paused'
     this.state         = 'playing';
+
+    this.modal         = null;
+    this.menu          = null;
   }
 
   cssGlobal() {
@@ -72,6 +75,17 @@ export class UI extends jst.Component {
         zIndex:          1000,
         pointerEvents:   "auto",
       },
+      uiBottomLeft$c: {
+        position:        "absolute",
+        color:           "#00C895",
+        padding$px:      0,
+        bottom$px:       0,
+        left$px:         0,
+        zIndex:          1000,
+      },
+      uiSessionName$c: {
+        cursor:          "pointer",
+      },
       uiButton$c: {
         display:         "inline-block",
         padding$px:      [8,10,8,11],
@@ -82,6 +96,11 @@ export class UI extends jst.Component {
         backgroundColor: "#00C895",
         borderRadius:    '50%',
         border$px:       [1, "solid", "#880"],
+      },
+      uiButtonFlat$c: {
+        borderRadius:    ['50%', '50%', '0%', '0%'],
+        borderBottom:    'none',
+        height$px:       28,
       },
       uiDeleteButton$c: {
         backgroundColor: "red",
@@ -109,6 +128,7 @@ export class UI extends jst.Component {
   }
 
   render() {
+    const sessionName = this.app.sessions.getCurrentSessionName();
     return jst.$div(
       {
         id: "-ui-container",
@@ -123,7 +143,7 @@ export class UI extends jst.Component {
           jst.if(this.state == "playing") && jst.$i({cn: "fas fa-pause"}) || jst.$i({cn: "fas fa-play"}),
         ),
         jst.if(this.state != "playing") && jst.$div(
-          {cn: "-uiButton", title: "Menu", events: {click: e => this.settings()}},
+          {cn: `-uiButton ${this.menu ? '-uiButtonFlat' : ''}`, title: "Menu", events: {click: e => this.toggleMenu()}},
           jst.$i({cn: "fas fa-bars"}),
         ),
         jst.if(this.state != "playing") && jst.$div(
@@ -162,6 +182,20 @@ export class UI extends jst.Component {
       ),
       jst.$div(
         {
+          cn: "-uiBottomLeft",
+        },
+        jst.$div(
+          {
+            cn: "-uiSessionName",
+            events: {
+              click: e => this.sessionNameClicked(e),
+            }
+          },
+          // sessionName || jst.$i("Unnamed"),
+        ),
+      ),
+      jst.$div(
+        {
           cn: "-uiBottomRight",
           events: {
           },
@@ -178,11 +212,13 @@ export class UI extends jst.Component {
           jst.$i({cn: "fas fa-trash-alt"}),
         ),
       ),
-      this.modal
+      this.modal,
+      this.menu
     );
   }
 
   togglePause() {
+    this.closeMenu();
     if (!this.initDone) {
       this.app.world.initOrientationEvents()
       this.initDone = true;
@@ -195,6 +231,14 @@ export class UI extends jst.Component {
       this.app.play();
     }
     this.refresh();
+  }
+
+  play() {
+    if (this.state != "playing") {
+      this.state = "playing";
+      this.app.play();
+    }
+    this.refresh()    
   }
 
   reset() {
@@ -244,6 +288,15 @@ export class UI extends jst.Component {
     })
   }
 
+  toggleMenu() {
+    if (this.menu) {
+      this.closeMenu();
+    } 
+    else {
+      this.showMenu();
+    }
+  }
+
   completeAdd(data) {
     this.app.world.addObject(data.addType, {});
     this.closeModal();
@@ -256,6 +309,24 @@ export class UI extends jst.Component {
 
   deleteClicked(e) {
     this.uis.deleteSelectedMeshes();
+  }
+
+  sessionNameClicked(e) {
+    const form = {
+      save: (data) => this.app.onSessionNameChange(data),
+      obj: this.createFakeObj({
+        sessionName: this.app.sessions.getCurrentSessionName(),
+      }),
+      fields: [
+        {name: "sessionName", type: "text", value: "", label: "Session Name"},
+      ]
+    }
+
+    this.showModal({
+      title: "Change Session Name",
+      form:  form,
+    })
+
   }
 
   deletePointerUp(e) {
@@ -291,11 +362,11 @@ export class UI extends jst.Component {
       }),
       jst.if(includeFooter) && jst.$div(
         {cn: "-uiFormFooter"},
-        jst.$button(
+        jst.if(!formInfo.noOkButton) && jst.$button(
           {events: {click: e => formInfo.accept ? formInfo.accept(formInfo) : this.acceptConfigForm(formInfo)}},
           "Ok"
         ),
-        jst.$button(
+        jst.if(!formInfo.noCancelButton) && jst.$button(
           {events: {click: e => formInfo.cancel ? formInfo.cancel(formInfo) : this.cancelConfigForm(formInfo)}},
           "Cancel"
         ),
@@ -352,6 +423,7 @@ export class UI extends jst.Component {
   }
 
   showModal(opts) {
+    this.closeMenu();
     this.modal = new UIModal(this, opts);
     this.refresh();
   }
@@ -361,6 +433,44 @@ export class UI extends jst.Component {
     this.refresh();
   }
 
+  showMenu() {
+    //this.menu = new UIMenu(this);
+    this.refresh();
+  } 
+
+  closeMenu() {
+    if (this.menu) {
+      this.menu = undefined;
+      this.refresh();
+    }
+  }
+
+  createFakeObj(obj) {
+    let fakeObj = {};
+    for (let key in obj) {
+      fakeObj[key] = obj[key];
+    }
+    fakeObj.getValue = (key) => {
+      return fakeObj[key];
+    }
+    return fakeObj;
+  }
+
+  yesNoModal(opts) {
+    const form = {
+      ok: () => opts.yes && opts.yes(),
+      cancel: () => opts.no && opts.no(),
+      obj: this.createFakeObj({}),
+      fields: [
+        {name: "message", type: "textLine", value: opts.message, label: opts.message},
+      ]
+    }
+    this.showModal({
+      title: opts.title,
+      form:  form,
+    })
+  }
+
 }
 
 class UIModal extends jst.Component {
@@ -368,6 +478,7 @@ class UIModal extends jst.Component {
       super();
       this.ui   = ui;
       this.opts = opts;
+      this.callerCancel = opts.form.cancel;
       opts.form.inverseColors = true;
       opts.form.accept = (form) => this.accept(form);
       opts.form.cancel = (form) => this.close(form);
@@ -495,18 +606,24 @@ class UIModal extends jst.Component {
     }
 
     close(form) {
+      if (this.callerCancel) {
+        this.callerCancel(form);
+      }
       this.ui.closeModal();
     }
 
     accept(form) {
       let values = {};
       form.fields.forEach(field => {
-        if (field.input) {
+        if (field.input && field.input.getValue) {
           values[field.name] = field.input.getValue();
         }
       });
       if (form.save) {
         form.save(values);
+      }
+      if (form.ok) {
+        form.ok(values);
       }
       this.ui.closeModal();
     }
@@ -830,5 +947,182 @@ class UIMultiObjectForm extends jst.Component {
   }
 
 }
+
+
+// UI Menu
+// 
+// This is a drop down menu that can be used to select the following items:
+// - New Session
+// - Open Session
+// - Save Session
+// - Save Session As
+// - Export Session
+// - Import Session
+
+class UIMenu extends jst.Component {
+  constructor(ui) {
+    super();
+    this.ui = ui;
+    this.app = ui.app;
+  }
+
+  cssLocal() {
+    return {
+      uiMenuOverlay$c: {
+        position: "fixed",
+        //zIndex: 9999,
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+      },
+      uiMenu$c: {
+        position: "absolute",
+        top$px: 50,
+        left$px: 0,
+        display: "flex",
+        flexDirection: "column",
+        //alignItems: "flex-end",
+        zIndex: 100,
+        backgroundColor: "#00C895",
+        //opacity: "0.8",
+        border$px: [1, "solid", "#880"],
+        borderRadius$px: [10, 10, 10, 10],
+        padding$px: [10, 0]
+      },
+      uiMenuButton$c: {
+        // width$px: 40,
+        // height$px: 40,
+        display: "flex",
+        justifyContent: "left",
+        //alignItems: "center",
+        cursor: "pointer",
+        color: "white",
+        fontSize$px: 16,
+        margin$px: 0,
+        padding$px: [3, 30, 5, 30],
+        whiteSpace: "nowrap",
+      },
+      uiMenuButton$c$hover: {
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+      },
+
+    }
+  }
+
+  render() {
+    const menuItems = [      
+      {name: "New", action: () => this.newSessionForm()},
+      {name: "Open", action: () => this.openSessionForm()},
+      {name: "Save", action: () => this.saveSession()},
+      {name: "Save As", action: () => this.saveSessionAsForm()},
+      {name: "Export", action: () => this.exportSessionForm()},
+      {name: "Import", action: () => this.importSessionForm()},
+    ]
+    return jst.$div(
+      {
+        cn: "-uiMenuOverlay",
+        events: {
+          click: () => this.ui.closeMenu(),
+        },
+      },
+      jst.$div(
+        {
+          cn: "-uiMenu",
+        },
+        menuItems.map(item => {
+          return jst.$div(
+            {
+              cn: "-uiMenuButton",
+              events: {
+                click: item.action,
+              },
+            },
+            item.name,
+          )
+        }),
+      ),
+    );
+  }
+
+  newSessionForm() {
+    const form = {
+      save: (data) => this.newSession(data),
+      obj:  this.ui.createFakeObj({sessionName: "",}),
+      fields: [{name: "sessionName", type: "text", label: "Session Name"}]
+    }
+
+    this.ui.showModal({
+      title: "New Session",
+      form:  form,
+    })
+  }
+
+  newSession(data) {
+    let sessionName = data.sessionName;
+    console.log("newSession: ", sessionName);
+  }
+
+
+  openSessionForm() {
+    this.notYetImplementedForm("Open Session");
+  }
+
+  saveSession() {
+    const name = this.app.sessions.getCurrentSessionName();
+    if (!name || name == "Unnamed") {
+      this.saveSessionAsForm();
+    } 
+    else {
+      this.save()
+    }
+  }
+
+  saveSessionAsForm() {
+    const form = {
+      save:   (data) => this.saveSessionAs(data),
+      obj:    this.ui.createFakeObj({sessionName: "",}),
+      fields: [{name: "sessionName", type: "text", label: "Session Name"}]
+    }
+
+    this.ui.showModal({
+      title: "New Session",
+      form:  form,
+    })
+  }
+
+  exportSessionForm() {
+    this.ui.yesNoModal({
+      message: "Export Session?",
+      yes: () => this.notYetImplementedForm(),
+      no: () => {},
+    });
+    //this.notYetImplementedForm("Export Session");
+  }
+
+  importSessionForm() {
+    this.notYetImplementedForm("Import Session");
+  }
+
+  notYetImplementedForm(title) {
+    this.ui.showModal({
+      title: title,
+      form:  {
+        save: (data) => this.notYetImplemented(data),
+        obj: this.ui.createFakeObj({
+        }),
+        noOkButton: true,
+        fields: [
+          {name: "nyi", type: "textLine", label: "Not Yet Implemented"}
+        ]
+      },
+    })
+  }
+
+}
+
 
 

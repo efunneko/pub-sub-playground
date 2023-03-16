@@ -71,6 +71,8 @@ export class Barrier extends StaticObject {
   // Create a shape from the points
   createBarrier() {
 
+    this.points = this.points.map(p => this.snapToGridVec2(p));
+
     // First create the material with a wood texture
     const material = new THREE.MeshStandardMaterial({
       map:          Assets.textures.woodTexture.albedo,
@@ -278,6 +280,7 @@ export class Barrier extends StaticObject {
     });
 
     this.recreateBarrier();
+    this.didMove = true;
 
   }    
 

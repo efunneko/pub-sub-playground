@@ -364,10 +364,12 @@ export class Emitter extends StaticObject {
   }
 
   singleShot(obj, pos, info) {
+    this.app.ui.play();
     this.lightNextRib(0);
   }
 
   startStopShot(obj, pos, info) {
+    this.app.ui.play();
     if (this.shotTimeout) {
       clearTimeout(this.shotTimeout);
       this.shotTimeout = null;

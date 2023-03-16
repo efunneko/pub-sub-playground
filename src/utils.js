@@ -282,6 +282,10 @@ export let utils = {
     }
   },
 
+  serdes: (obj) => {
+    return JSON.parse(JSON.stringify(obj));
+  },
+
   getComplementaryColor: (color) => {
     const lookup = {
       'red': 'white',

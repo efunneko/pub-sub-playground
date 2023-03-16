@@ -23,6 +23,7 @@ export class SolaceMessaging extends Messaging {
       vpnName:  this.vpnName || "default",
       noLocal:  true,
       connectRetries: 2,
+      reconnectRetries: 2,
       reapplySubscriptions: true,
     }
 
@@ -69,6 +70,9 @@ export class SolaceMessaging extends Messaging {
       */
     });
     this.session.on(solace.SessionEventCode.DOWN_ERROR, (sessionEvent) => {
+      if (this.onDisconnect) {
+        this.onDisconnect(this, sessionEvent.infoStr);
+      }
       /*
       console.log('Details: ' + sessionEvent.details);
       console.log('Description: ' + sessionEvent.description);
@@ -76,8 +80,18 @@ export class SolaceMessaging extends Messaging {
     });
 
     this.session.on(solace.SessionEventCode.DISCONNECTED, (sessionEvent) => {
+      console.log("EDE - DISCONNECTED");
+      if (this.onDisconnect) {
+        this.onDisconnect(this, sessionEvent.infoStr);
+      }
       //console.log('Disconnected.');
     });
+
+    this.session.on(solace.SessionEventCode.RECONNECTING_NOTICE, (sessionEvent) => {
+      console.log("EDE - RECONNECTING");
+      //console.log('Reconnecting...');
+    });
+
 
     this.session.on(solace.SessionEventCode.SUBSCRIPTION_ERROR, (sessionEvent) => {
       console.log('Cannot subscribe to topic: ' + sessionEvent.correlationKey + '; error code: ' + sessionEvent.errorCode);

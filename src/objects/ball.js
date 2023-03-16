@@ -101,9 +101,8 @@ export class Ball extends DynamicObject {
 
     }
 
-    const material = new THREE.MeshStandardMaterial({
+    const material = new THREE.MeshPhysicalMaterial({
       map:               texture,
-      roughnessMap:      Assets.textures.stainlessSteelTexture.rough,
       metalness:         0.1,
       roughness:         1,
     });

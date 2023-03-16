@@ -157,6 +157,46 @@ class Text extends Input {
   }
 }
 
+// A simple separator line in the input form
+class Separator extends Input {
+  constructor(app, obj, opts, formInfo) {
+    super(app, obj, opts, formInfo);
+  }
+
+  cssLocal() {
+    return {
+      uiSeparator$c: {
+        margin$px:       [10,0,10,0],
+        borderBottom:    "1px solid #ccc",
+      },
+    };
+  }
+
+  render() {
+    return jst.$div({class: "-uiSeparator"});
+  }
+}
+
+// A text line that is not editable
+class TextLine extends Input {
+  constructor(app, obj, opts, formInfo) {
+    super(app, obj, opts, formInfo);
+  }
+
+  cssLocal() {
+    return {
+      uiTextLine$c: {
+        margin$px:       [0,0,5,0],
+      },
+    };
+  }
+
+  render() {
+    return jst.$div({class: "-uiTextLine"}, this.label);
+  }
+
+}
+
 class Password extends Text {
   constructor(app, obj, opts, formInfo) {
     super(app, obj, opts, formInfo);
@@ -738,6 +778,8 @@ export class UIInputTypes {
       case "colorGrid": return ColorGrid;
       case "numberRange": return NumberRange;
       case "subObject": return SubObject;
+      case "separator": return Separator;
+      case "textLine": return TextLine;
     }
   }
 
@@ -752,6 +794,8 @@ export class UIInputTypes {
   static ColorGrid      = ColorGrid;
   static NumberRange    = NumberRange;
   static SubObject      = SubObject;
+  static Separator      = Separator;
+  static TextLine       = TextLine;
 
   //static NumberInput  = Number;
   //static CheckboxList = CheckboxList;
