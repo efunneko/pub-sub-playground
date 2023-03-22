@@ -47,9 +47,6 @@ export class App extends jst.Component {
 
     this.world              = new World(this, {ui: this.ui})
 
-    this.sessions           = new Sessions(this);
-    this.sessions.loadSessions();
-
     this.pendingSave        = false
 
     // Experimental locking of orientation
@@ -95,19 +92,36 @@ export class App extends jst.Component {
   // Get all the config from the world and save it in local storage
   getConfigForSave() {
     return {
-      version:          1,
-      world:            this.world.getConfig(),
-      globalSettings:   this.globalParams.getConfig(this),
+      version:          2,
+      sessionConfig:    this.sessions.getFullConfig(),
+      globalSettings:   this.globalParams.getConfig(this)
     };
   }
 
+  getConfigForURL() {
+    return {
+      version:          2,
+      sessionConfig:    this.sessions.getCurrentSessionConfig(),
+      globalSettings:   this.globalParams.getConfig(this)
+    };
+  }
+
+  // When saving the config, we will push the current config into the session manager and save that
+  // We will also save the single session config into the URL along with the global settings
   saveConfig() {
+
+    this.updateCurrentSession();
+
     let config = this.getConfigForSave();
 
     // Get the JSON string of the config
-    const json = JSON.stringify(config);
+    let json = JSON.stringify(config);
 
     localStorage.setItem("config", JSON.stringify(config));
+
+    // Get the URL config
+    config = this.getConfigForURL();
+    json = JSON.stringify(config);
 
     // Compress the JSON string and get a URI safe string
     const compressed = LZString.compressToEncodedURIComponent(json);
@@ -118,6 +132,11 @@ export class App extends jst.Component {
       history.pushState({}, null, url);
     }
     this.setPendingSave(false);
+  }  
+
+  updateCurrentSession() {
+    const worldConfig = this.world.getConfig();
+    this.sessions.setCurrentSessionConfig(worldConfig);
   }
 
   onSettingsChange(data) {
@@ -129,41 +148,120 @@ export class App extends jst.Component {
     }
   }
 
-  // Load the config from local storage
-  loadConfig() {
+  loadLocalStorageConfig() {
+    let config = localStorage.getItem("config");
+    if (config) {
+      config = JSON.parse(config);
+    }  
+    return this.upgradeConfig(config);
+  }
 
-    // If there is a config in the URL, use that
+  loadURLConfig() {
     const urlParams = new URLSearchParams(window.location.search);
     let config = urlParams.get('config');
     if (config) {
       config = LZString.decompressFromEncodedURIComponent(config);
       config = JSON.parse(config);
     }
-    else {
-      config = localStorage.getItem("config");
-      if (config) {
-        config = JSON.parse(config);
-      }  
+    return this.upgradeConfig(config);
+  }
+
+  upgradeConfig(config) {
+    if (config && config.version == 1) {
+      config.version = 2;
+      config.world.name = "Unnamed";
+      config.sessionConfig = {
+        sessions: [config.world],
+        currentSessionName: config.world.name,
+      };
+      delete config.world;
     }
-
-    let globalSettings = {};
-    if (config) {
-
-      if (config.globalSettings) {
-        globalSettings = config.globalSettings;
+    else if (config && config.version == 2) {
+      if (config.sessions) {
+        config.sessionConfig = config.sessions;
+        delete config.sessions;
       }
     }
+    return config;
+  }
 
+  mergeConfig(config1, config2) {
+    if (!config1) {
+      return config2;
+    }
+    if (!config2) {
+      return config1;
+    }
+    // For each session in config1, see if there is a matching session in config2
+    // If there is, check if the config is different
+    // If it is, add a unique suffix to the name of the session in config2 and add it to the merged config
+    // If there is not, add the session to the merged config
+    const mergedConfig = {
+      version: 2,
+      sessionConfig: {
+        sessions: [],
+        currentSessionName: config1.sessionConfig.currentSessionName,
+      },
+      globalSettings: config1.globalSettings,
+    };
+    const sessionNames = {};
+    const sessionNames2 = {};
+    config1.sessionConfig.sessions.forEach(session => {
+      sessionNames[session.name] = true;
+      mergedConfig.sessionConfig.sessions.push(session);
+    });
+    config2.sessionConfig.sessions.forEach(session => {
+      sessionNames2[session.name] = true;
+    });
+    config2.sessionConfig.sessions.forEach(session => {
+      if (sessionNames[session.name]) {
+        // check if the session is different
+        const session1 = config1.sessionConfig.sessions.find(s => s.name == session.name);
+        if (JSON.stringify(session1) != JSON.stringify(session)) {
+          let suffix = 1;
+          while (sessionNames[session.name + suffix] || sessionNames2[session.name + suffix]) {
+            suffix++;
+          }
+          session.name = session.name + suffix;
+          // Add the session to the merged config
+          mergedConfig.sessionConfig.sessions.push(session);
+        }
+      } 
+      else {
+        // Add the session to the merged config
+        mergedConfig.sessionConfig.sessions.push(session);
+      }
+    });
+
+    return mergedConfig;
+
+  }
+
+  // Load the config from local storage
+  loadConfig() {
+
+    const urlConfig          = this.loadURLConfig();
+    const localStorageConfig = this.loadLocalStorageConfig();
+
+    let config = this.mergeConfig(urlConfig, localStorageConfig);
+
+    let globalSettings = {};
+    if (config && config.globalSettings) {
+      globalSettings = config.globalSettings;
+    }
     this.globalParams = new ObjectParams(this, GLOBAL_PARAMS, globalSettings);
 
     this.config = config;
+
+    this.sessions = new Sessions(this, config.sessionConfig);
 
   }
 
   // Apply the config to the world, which will create all the objects
   applyConfig() {
-    if (this.config) {
-      this.world.setConfig(this.config.world);
+    const session = this.sessions.getCurrentSession();
+    if (session) {
+      this.world.setConfig(session);
     }
     else {
       this.world.setConfig(undefined);
@@ -183,6 +281,11 @@ export class App extends jst.Component {
       this.ui.setPendingSave(val);
     }
     this.saveUndo();
+  }
+
+  changeSessionName(name) {
+    this.sessions.setCurrentSessionName(name);
+    this.setPendingSave(true);
   }
 
   play() {

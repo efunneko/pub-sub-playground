@@ -126,6 +126,7 @@ export class Ball extends DynamicObject {
 
     // Add the mesh to the dynamic group
     this.group.add(mesh);
+    this.group.position.set(this.x, this.y, 0);
 
     // Do the same for the physics engine
     mesh.userData.physicsBodies = [this.createPhysicsBody()];

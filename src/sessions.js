@@ -5,47 +5,45 @@
 
 
 export class Sessions {
-  constructor(app) {
+  constructor(app, sessionConfig) {
     this.app = app;
     this.sessions = [];
     this.undoStack = [];
     this.currentSession = null;
 
-    this.loadSessions();
+    this.setFullConfig(sessionConfig);
+    //this.loadSessions(sessionConfig);
 
   }
 
-  loadSessions() {
-    let sessions = localStorage.getItem('sessions');
-    if (sessions) {
-      this.sessions = JSON.parse(sessions);
+  setFullConfig(sessionConfig) {
+    if (sessionConfig) {
+      this.sessions       = sessionConfig.sessions;
+      let name            = sessionConfig.currentSessionName;
+      this.currentSession = this.sessions.find(s => s.name === name);
+      if (!this.currentSession) {
+        this.currentSession      = this.sessions[0];
+        this.currentSession.name = this.currentSession.name || "Unnamed";
+      }
     }
-    else {
-      this.sessions = [];
+    else {      
+      this.sessions       = [];
+      this.currentSession = {name: "Unnamed", version: 2};
     }
   }
 
-  saveSessions() {
-    localStorage.setItem('sessions', JSON.stringify(this.sessions));
-  }
-
-  saveSession(name, sessionConfig) {
-    let session = {
-      name: name,
-      config: sessionConfig,
+  getFullConfig() {
+    return {
+      sessions: this.sessions,
+      currentSessionName: this.currentSession.name,
     };
-    this.sessions.push(session);
-    this.saveSessions();
   }
 
-  // Returns the session config if found, otherwise null
-  loadSession(name) {
+  selectSession(name) {
     let session = this.sessions.find(s => s.name === name);
     if (session) {
       this.currentSession = session;
-      return session.config;
     }
-    return null;
   }
 
   getSessionNames() {
@@ -54,7 +52,6 @@ export class Sessions {
 
   deleteSession(name) {
     this.sessions = this.sessions.filter(s => s.name !== name);
-    this.saveSessions();
   }
 
   getCurrentSessionName() {
@@ -64,11 +61,25 @@ export class Sessions {
     return null;
   }
 
+  setCurrentSessionName(name) {
+    this.currentSession.name = name;
+  }
+
+  setCurrentSessionConfig(config) {
+    Object.assign(this.currentSession, config);
+    this.currentSession.name = this.currentSession.name || "Unnamed";
+  }
+
+  // Return only the current session config as the full config
   getCurrentSessionConfig() {
-    if (this.currentSession) {
-      return this.currentSession.config;
+    return {
+      sessions: [this.currentSession],
+      currentSessionName: this.currentSession.name,
     }
-    return null;
+  }
+
+  getCurrentSession() {
+    return this.currentSession;
   }
 
   addToUndoStack(config) {

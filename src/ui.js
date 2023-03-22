@@ -129,6 +129,7 @@ export class UI extends jst.Component {
 
   render() {
     const sessionName = this.app.sessions.getCurrentSessionName();
+    console.log("sessionName", sessionName);
     return jst.$div(
       {
         id: "-ui-container",
@@ -191,7 +192,7 @@ export class UI extends jst.Component {
               click: e => this.sessionNameClicked(e),
             }
           },
-          // sessionName || jst.$i("Unnamed"),
+          sessionName || jst.$i("Unnamed"),
         ),
       ),
       jst.$div(
@@ -313,12 +314,15 @@ export class UI extends jst.Component {
 
   sessionNameClicked(e) {
     const form = {
-      save: (data) => this.app.onSessionNameChange(data),
+      save: (data) => {
+        this.app.changeSessionName(data.sessionName);
+        this.refresh();
+      },
       obj: this.createFakeObj({
-        sessionName: this.app.sessions.getCurrentSessionName(),
+        sessionName: this.app.sessions.getCurrentSessionName() || "",
       }),
       fields: [
-        {name: "sessionName", type: "text", value: "", label: "Session Name"},
+        {name: "sessionName", type: "text", default: "", label: "Session Name"},
       ]
     }
 
@@ -434,7 +438,8 @@ export class UI extends jst.Component {
   }
 
   showMenu() {
-    //this.menu = new UIMenu(this);
+    return;
+    this.menu = new UIMenu(this);
     this.refresh();
   } 
 
@@ -715,7 +720,7 @@ class UIMultiObjectForm extends jst.Component {
               click: e => this.alignLeft(),
             },
           },
-          jst.$img({src: "images/icons/align-left.svg"}),
+          jst.$img({src: "images/icons/align-left.svg", title: "Align Left"}),
         ),
         jst.$div(
           {
@@ -724,7 +729,7 @@ class UIMultiObjectForm extends jst.Component {
               click: e => this.alignCenter(),
             },
           },
-          jst.$img({src: "images/icons/align-center-horizontal.svg"}),
+          jst.$img({src: "images/icons/align-center-horizontal.svg", title: "Align Center"}),
         ),
         jst.$div(
           {
@@ -733,7 +738,7 @@ class UIMultiObjectForm extends jst.Component {
               click: e => this.alignRight(),
             },
           },
-          jst.$img({src: "images/icons/align-right.svg"}),
+          jst.$img({src: "images/icons/align-right.svg", title: "Align Right"}),
         ),
       ),
       jst.$div(
@@ -749,7 +754,7 @@ class UIMultiObjectForm extends jst.Component {
               click: e => this.alignTop(),
             },
           },
-          jst.$img({src: "images/icons/align-top.svg"}),
+          jst.$img({src: "images/icons/align-top.svg", title: "Align Top"}),
         ),
         jst.$div(
           {
@@ -758,7 +763,7 @@ class UIMultiObjectForm extends jst.Component {
               click: e => this.alignMiddle(),
             },
           },
-          jst.$img({src: "images/icons/align-center-vertical.svg"}),
+          jst.$img({src: "images/icons/align-center-vertical.svg", title: "Align Middle"}),
         ),
         jst.$div(
           {
@@ -767,7 +772,7 @@ class UIMultiObjectForm extends jst.Component {
               click: e => this.alignBottom(),
             },
           },
-          jst.$img({src: "images/icons/align-bottom.svg"}),
+          jst.$img({src: "images/icons/align-bottom.svg", title: "Align Bottom"}),
         ),
       ),
       jst.$div(
@@ -783,7 +788,7 @@ class UIMultiObjectForm extends jst.Component {
               click: e => this.distributeHorizontal(),
             },
           },
-          jst.$img({src: "images/icons/distribute-horizontal.svg"}),
+          jst.$img({src: "images/icons/distribute-horizontal.svg", title: "Distribute Horizontally"}),
         ),
         jst.$div(
           {
@@ -792,7 +797,7 @@ class UIMultiObjectForm extends jst.Component {
               click: e => this.distributeVertical(),
             },
           },
-          jst.$img({src: "images/icons/distribute-vertical.svg"}),
+          jst.$img({src: "images/icons/distribute-vertical.svg", title: "Distribute Vertically"}),
         ),
       ),
       jst.$div(
@@ -808,7 +813,7 @@ class UIMultiObjectForm extends jst.Component {
               click: e => this.groupObjects(),
             },
           },
-          jst.$img({src: "images/icons/object-group-solid.svg", title: "Group objects"}),
+          jst.$img({src: "images/icons/object-group-solid.svg", title: "Group Objects"}),
         ),
         jst.$div(
           {
@@ -817,7 +822,7 @@ class UIMultiObjectForm extends jst.Component {
               click: e => this.ungroupObjects(),
             },
           },
-          jst.$img({src: "images/icons/object-ungroup.svg", title: "Ungroup objects"}),
+          jst.$img({src: "images/icons/object-ungroup.svg", title: "Ungroup Objects"}),
         ),
       ),
     );
@@ -828,6 +833,7 @@ class UIMultiObjectForm extends jst.Component {
     this.objects.forEach(object => {
       object.setMinX(minX);
     });
+    this.ui.saveableConfigChanged();
   }
 
   alignCenter() {
@@ -838,6 +844,7 @@ class UIMultiObjectForm extends jst.Component {
       const width = object.getWidth();
       object.setMinX(midX - width / 2);
     });
+    this.ui.saveableConfigChanged();
   }
 
   alignRight() {
@@ -845,6 +852,7 @@ class UIMultiObjectForm extends jst.Component {
     this.objects.forEach(object => {
       object.setMaxX(maxX);
     });
+    this.ui.saveableConfigChanged();
   }
 
   alignTop() {
@@ -853,6 +861,7 @@ class UIMultiObjectForm extends jst.Component {
     this.objects.forEach(object => {
       object.setMaxY(maxY);
     });
+    this.ui.saveableConfigChanged();
   }
 
   alignMiddle() {
@@ -863,6 +872,7 @@ class UIMultiObjectForm extends jst.Component {
       const height = object.getHeight();
       object.setMinY(midY - height / 2);
     });
+    this.ui.saveableConfigChanged();
   }
 
   alignBottom() {
@@ -871,6 +881,7 @@ class UIMultiObjectForm extends jst.Component {
     this.objects.forEach(object => {
       object.setMinY(minY);
     });
+    this.ui.saveableConfigChanged();
   }
 
   distributeHorizontal() {
@@ -884,19 +895,11 @@ class UIMultiObjectForm extends jst.Component {
       return total + object.getWidth();
     }, 0);
 
-    objects.forEach(object => {
-      console.log("minX: ", object.getMinX(), "maxX: ", object.getMaxX(), "width: ", object.getWidth());
-    });
-
     // Calculate the total width of the space between the objects
     const totalSpace = objects[objects.length - 1].getMaxX() - objects[0].getMinX() - totalWidth;
 
     // Calculate the space between each object
     const space = totalSpace / (objects.length - 1);
-
-    console.log("totalWidth: ", totalWidth);
-    console.log("totalSpace: ", totalSpace);
-    console.log("space: ", space);
 
     // Calculate the new x position of each object
     let x = objects[0].getMinX();
@@ -904,6 +907,8 @@ class UIMultiObjectForm extends jst.Component {
       object.setMinX(x);
       x += object.getWidth() + space;
     });
+
+    this.ui.saveableConfigChanged();
 
   }
 
@@ -929,6 +934,9 @@ class UIMultiObjectForm extends jst.Component {
       object.setMinY(y);
       y += object.getHeight() + space;
     });
+
+    this.ui.saveableConfigChanged();
+
   }
 
   groupObjects() {
@@ -938,12 +946,14 @@ class UIMultiObjectForm extends jst.Component {
     })
     let objectGroup = this.app.createObjectGroup(this.objects);
     this.ui.uis.selectMesh(objectGroup.getMesh());
+    this.ui.saveableConfigChanged();
   }
 
   ungroupObjects() {
     this.objects.forEach(object => {
       this.app.destroyObjectGroup(object);
     });
+    this.ui.saveableConfigChanged();
   }
 
 }
@@ -1063,7 +1073,6 @@ class UIMenu extends jst.Component {
 
   newSession(data) {
     let sessionName = data.sessionName;
-    console.log("newSession: ", sessionName);
   }
 
 
@@ -1089,7 +1098,7 @@ class UIMenu extends jst.Component {
     }
 
     this.ui.showModal({
-      title: "New Session",
+      title: "Save Session As",
       form:  form,
     })
   }
