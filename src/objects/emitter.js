@@ -63,6 +63,7 @@ export class Emitter extends StaticObject {
   }
 
   getObjForConfig(objClass, opts = {}) {
+    opts             = Object.assign({}, opts);
     opts.scene       = this.scene;
     opts.isSubObject = true;
     const obj        = new objClass(this.app, opts);

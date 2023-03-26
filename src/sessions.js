@@ -16,6 +16,20 @@ export class Sessions {
 
   }
 
+  createSession(config) {
+    // Add the new session to the list of sessions
+    const newSession = Object.assign({}, config);
+    this.sessions.push(newSession);
+    this.currentSession = newSession;
+  }
+
+  loadSession(name) {
+    let session = this.sessions.find(s => s.name === name);
+    if (session) {
+      this.currentSession = session;
+    }
+  }
+
   setFullConfig(sessionConfig) {
     if (sessionConfig) {
       this.sessions       = sessionConfig.sessions;
@@ -54,6 +68,11 @@ export class Sessions {
     this.sessions = this.sessions.filter(s => s.name !== name);
   }
 
+  deleteCurrentSession() {
+    this.deleteSession(this.currentSession.name);
+    this.currentSession = null;
+  }
+
   getCurrentSessionName() {
     if (this.currentSession) {
       return this.currentSession.name;
@@ -65,9 +84,17 @@ export class Sessions {
     this.currentSession.name = name;
   }
 
-  setCurrentSessionConfig(config) {
-    Object.assign(this.currentSession, config);
-    this.currentSession.name = this.currentSession.name || "Unnamed";
+  // Set the current session config to the given config. Name is optional
+  setCurrentSessionConfig(config, name) {
+    if (name) {
+      config.name = name;
+      this.createSession(config);
+    }
+    else {
+      Object.assign(this.currentSession, config);
+      this.currentSession.name = this.currentSession.name || "Unnamed";
+    }
+    this.currentSession.timestamp = Date.now();
   }
 
   // Return only the current session config as the full config

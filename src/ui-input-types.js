@@ -82,7 +82,7 @@ class Input extends jst.Component {
         marginTop$px:    this.type == "subObject" ? 15: 0,
       },        
       uiInputLabel$c: {
-        fontSize:        this.type == "subObject" ? "90%": "65%",
+        fontSize:        this.labelSize || this.type == "subObject" ? "90%": "65%",
       },
     };
   }
@@ -104,7 +104,7 @@ class Input extends jst.Component {
       },
       // Add a label div
       jst.$div(
-        {cn: `--uiInputLabelDiv`},
+        {cn: `-uiInputLabelDiv --uiInputLabelDiv`},
         jst.$label({cn: "-uiInputLabel --uiInputLabel", title: this.title}, this.label),
       ),
       // Add the input
@@ -657,6 +657,109 @@ class List extends Input {
   }
 }
 
+// Selection list will display a list of options in a scrollable list
+// Only one option can be selected at a time
+class SelectionList extends Input {
+  constructor(app, obj, opts, formInfo) {
+    super(app, obj, opts, formInfo);
+    this.app       = app;
+    this.value     = opts.value;
+    this.entryName = opts.entryName;
+    this.width     = opts.width || 200;
+    this.labelSize = opts.labelSize;
+
+    // Sort the options case-insensitively
+    this.options = opts.options.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  }
+
+  cssLocal() {
+    return {
+      uiList$c: {
+        margin$px:       [2,0,5,0],
+      },
+      tableDiv$c: {
+        fontSize:        '95%',
+        maxHeight$vh:    50,
+        overflowY:       "auto",
+        boxShadow$px:    [0,0,5,0,jst.rgba(0,0,0,0.3), 'inset'],
+        padding$px:      [8, 15],
+      },
+      delete$c: {
+      },
+      selected$c: {
+        backgroundColor: "lightgray",
+      }
+    };
+  }
+
+  render() {
+    return super.renderInput(jst.$div(
+      {class: "-uiList"},
+        jst.$div({cn: '-tableDiv'},
+            this.options.map((entry, i) => 
+                jst.$div(jst.$div({cn: `-entry ${this.value == entry ? "-selected" : ""}`, events: {click: e => this.selectEntry(e, i)}}, entry))),
+                //jst.$td(jst.$div({cn: '-delete', title: 'Remove'}, jst.$i({cn: 'fas fa-minus-circle', events: {click: e => this.deleteEntry(e, i)}})))
+        ),
+    ));
+  }
+
+  selectEntry(e, index) {
+    this.value = this.options[index];
+    this.refresh();
+  }
+
+  getValue() {
+    return this.value;
+  }
+
+}
+
+class FileInput extends Input {
+  constructor(app, obj, opts, formInfo) {
+    super(app, obj, opts, formInfo);
+    this.app     = app;
+    this.value   = opts.value;
+    this.width   = opts.width || 200;
+    this.height  = opts.height || 20;
+    this.label   = opts.label;
+    this.labelSize = opts.labelSize;
+    this.accept  = opts.accept;
+  }
+
+  cssLocal() {
+    return {
+      file$c: {
+      },
+      fileInput$c: {
+        //accentColor:     "#69ffd9",
+        padding$px:      [10,5,15,0],
+        cursor:          "pointer",
+      },
+      fileLabel$c: {
+        fontSize:        '68%',
+      },
+    };
+  }
+
+  render() {
+    return super.renderInput(jst.$div(
+        jst.$div({cn: '-file'},
+          jst.$input({type: "file", cn: '-fileInput', events: {change: e => this.fileSelected(e)}, accept: this.accept}),
+        ),
+    ));
+  }
+
+  fileSelected(e) {
+    this.value = e.target.files[0];
+    this.refresh();
+  }
+
+  getValue() {
+    return this.value;
+  }
+
+}
+
 class NumberRange extends Input {
   constructor(app, obj, opts, formInfo) {
     super(app, obj, opts, formInfo);
@@ -780,6 +883,8 @@ export class UIInputTypes {
       case "subObject": return SubObject;
       case "separator": return Separator;
       case "textLine": return TextLine;
+      case "selectionList": return SelectionList;
+      case "file": return FileInput;
     }
   }
 
@@ -796,10 +901,7 @@ export class UIInputTypes {
   static SubObject      = SubObject;
   static Separator      = Separator;
   static TextLine       = TextLine;
+  static SelectionList  = SelectionList;
+  static FileInput      = FileInput;
 
-  //static NumberInput  = Number;
-  //static CheckboxList = CheckboxList;
-  //static Toggle       = Toggle;
-  //static TextList     = TextList;
-  //static Button       = Button;
 }

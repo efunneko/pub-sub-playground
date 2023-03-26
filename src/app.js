@@ -108,16 +108,16 @@ export class App extends jst.Component {
 
   // When saving the config, we will push the current config into the session manager and save that
   // We will also save the single session config into the URL along with the global settings
-  saveConfig() {
+  saveConfig(name) {
 
-    this.updateCurrentSession();
+    this.updateCurrentSession(name);
 
     let config = this.getConfigForSave();
 
     // Get the JSON string of the config
     let json = JSON.stringify(config);
 
-    localStorage.setItem("config", JSON.stringify(config));
+    localStorage.setItem("config", json);
 
     // Get the URL config
     config = this.getConfigForURL();
@@ -132,11 +132,21 @@ export class App extends jst.Component {
       history.pushState({}, null, url);
     }
     this.setPendingSave(false);
-  }  
+  }
+  
+  getConfig() {
+    const config = this.getConfigForSave();
+    return JSON.stringify(config);
+  }
 
-  updateCurrentSession() {
+  getCurrentSessionConfig() {
+    const config = this.getConfigForURL();
+    return JSON.stringify(config);
+  }
+
+  updateCurrentSession(sessionName) {
     const worldConfig = this.world.getConfig();
-    this.sessions.setCurrentSessionConfig(worldConfig);
+    this.sessions.setCurrentSessionConfig(worldConfig, sessionName);
   }
 
   onSettingsChange(data) {
@@ -270,6 +280,20 @@ export class App extends jst.Component {
     this.setPendingSave(false);
   }
 
+  // Called to import new config that was loaded from a file
+  importConfig(config) {
+
+    // We will merge this into the current config
+    const currentConfig = this.getConfigForSave();
+
+    // Merge the sessions
+    const mergedConfig = this.mergeConfig(currentConfig, config);
+
+    // Save the merged config
+    this.sessions.setFullConfig(mergedConfig.sessionConfig);
+
+  }
+
   getGlobalParams() {
     return this.globalParams.getParams();
   }
@@ -401,6 +425,54 @@ export class App extends jst.Component {
     }
     return this.nextObjectId++;
   }
+
+  createSession(name) {
+    const newSessionConfig = {
+      name: name,
+      objects: []
+    };
+
+    this.sessions.createSession(newSessionConfig);
+
+    // Remove all the objects from the world
+    this.world.clear();
+
+    this.world.initSession();
+
+    this.setPendingSave(true);
+  }
+
+  deleteCurrentSession() {
+    this.sessions.deleteCurrentSession();
+
+    // Now load the first session
+    const firstSession = this.sessions.getSessionNames()[0];
+
+    if (firstSession) {
+      this.loadSession(firstSession);
+    }
+    else {
+      // No sessions left, so create a new one
+      this.createSession("Unnamed");
+    }
+
+    this.saveConfig();
+  }
+
+  loadSession(name) {
+    // Remove all the objects from the world
+    this.world.clear();
+
+    // Load the session
+    this.sessions.loadSession(name);
+
+    // Apply the config to the world
+    this.applyConfig();
+
+    this.setPendingSave(false);
+
+  }
+
 
   createObjectGroup(objects) {
     return this.world.createObjectGroup(objects);

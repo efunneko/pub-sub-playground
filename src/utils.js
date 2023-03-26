@@ -289,7 +289,6 @@ export let utils = {
   // Return true if the passed in object or array is equal to the other
   // object or array
   isEqual: (obj1, obj2) => {
-    console.log('isEqual: ' + JSON.stringify(obj1) + ' ' + JSON.stringify(obj2));
     return JSON.stringify(obj1) === JSON.stringify(obj2);
   },
 
@@ -312,6 +311,30 @@ export let utils = {
       'lightblue': 'black',
     };
     return lookup[color];
+  },
+
+  saveFile: (filename, data) => {
+    let blob = new Blob([data], {type: 'text/plain'});
+    let a = document.createElement('a');
+    a.href = window.URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  },
+
+  loadFile: (file, callback) => {
+    let reader = new FileReader();
+    reader.onload = (e) => {
+      callback(e.target.result);
+    };
+    reader.readAsText(file);
+  },
+
+  loadFileAsync: async (file) => {
+    return new Promise((resolve, reject) => {
+      utils.loadFile(file, (data) => {
+        resolve(data);
+      });
+    });
   }
 
   

@@ -6,6 +6,7 @@ import * as THREE           from 'three'
 import {jst}                from "jayesstee";
 import {UISelection}        from './ui-selection.js';
 import {UIInputTypes}       from './ui-input-types.js';
+import {utils}              from './utils.js';
 
 export class UI extends jst.Component {
   constructor(app, opts) {
@@ -106,7 +107,7 @@ export class UI extends jst.Component {
         backgroundColor: "red",
       },
       uiForm$c: {
-        display:         "inline-block",
+        //display:         "inline-block",
         padding$px:      [8,10,8,11],
         fontSize:        "130%",
         cursor:          "pointer",
@@ -129,7 +130,6 @@ export class UI extends jst.Component {
 
   render() {
     const sessionName = this.app.sessions.getCurrentSessionName();
-    console.log("sessionName", sessionName);
     return jst.$div(
       {
         id: "-ui-container",
@@ -246,8 +246,8 @@ export class UI extends jst.Component {
     this.app.reset();
   }
 
-  save() {
-    this.app.saveConfig();
+  save(name) {
+    this.app.saveConfig(name);
     this.refresh();
   }
 
@@ -366,9 +366,17 @@ export class UI extends jst.Component {
       }),
       jst.if(includeFooter) && jst.$div(
         {cn: "-uiFormFooter"},
-        jst.if(!formInfo.noOkButton) && jst.$button(
+        jst.if(!formInfo.yes && !formInfo.noOkButton) && jst.$button(
           {events: {click: e => formInfo.accept ? formInfo.accept(formInfo) : this.acceptConfigForm(formInfo)}},
           "Ok"
+        ),
+        jst.if(formInfo.yes) && jst.$button(
+          {events: {click: e => formInfo.yes(formInfo)}},
+          "Yes"
+        ),
+        jst.if(formInfo.no) && jst.$button(
+          {events: {click: e => formInfo.no(formInfo)}},
+          "No"
         ),
         jst.if(!formInfo.noCancelButton) && jst.$button(
           {events: {click: e => formInfo.cancel ? formInfo.cancel(formInfo) : this.cancelConfigForm(formInfo)}},
@@ -432,13 +440,25 @@ export class UI extends jst.Component {
     this.refresh();
   }
 
+  async showModalAsync(opts) {
+    return new Promise((resolve, reject) => {
+      opts.yes = () => resolve(true);
+      opts.no = () => resolve(false);
+      opts.cancel = () => resolve(false);
+      if (opts.form) {
+        opts.form.save = (data) => resolve(data);
+        opts.form.cancel = () => resolve(false);
+      }
+      this.showModal(opts);
+    });
+  }
+
   closeModal(opts) {
     this.modal = undefined
     this.refresh();
   }
 
   showMenu() {
-    return;
     this.menu = new UIMenu(this);
     this.refresh();
   } 
@@ -461,10 +481,11 @@ export class UI extends jst.Component {
     return fakeObj;
   }
 
-  yesNoModal(opts) {
+  yesNoCancelModal(opts) {
     const form = {
-      ok: () => opts.yes && opts.yes(),
-      cancel: () => opts.no && opts.no(),
+      yes: () => {this.closeModal(); opts.yes()},
+      no: () => {this.closeModal(); opts.no()},
+      cancel: () => {this.closeModal(); opts.cancel()},
       obj: this.createFakeObj({}),
       fields: [
         {name: "message", type: "textLine", value: opts.message, label: opts.message},
@@ -476,6 +497,14 @@ export class UI extends jst.Component {
     })
   }
 
+  yesNoCancelModalAsync(opts) {
+    return new Promise((resolve, reject) => {
+      opts.yes = () => resolve('yes');
+      opts.no = () => resolve('no');
+      opts.cancel = () => resolve('cancel');
+      this.yesNoCancelModal(opts);
+    });
+  }
 }
 
 class UIModal extends jst.Component {
@@ -483,7 +512,7 @@ class UIModal extends jst.Component {
       super();
       this.ui   = ui;
       this.opts = opts;
-      this.callerCancel = opts.form.cancel;
+      this.callerCancel = opts.form && opts.form.cancel;
       opts.form.inverseColors = true;
       opts.form.accept = (form) => this.accept(form);
       opts.form.cancel = (form) => this.close(form);
@@ -891,7 +920,6 @@ class UIMultiObjectForm extends jst.Component {
 
     // Calculate the total width of the objects
     const totalWidth = objects.reduce((total, object, i) => {
-      console.log("widths: ", total, object.getWidth(), i);
       return total + object.getWidth();
     }, 0);
 
@@ -1025,12 +1053,13 @@ class UIMenu extends jst.Component {
 
   render() {
     const menuItems = [      
-      {name: "New", action: () => this.newSessionForm()},
-      {name: "Open", action: () => this.openSessionForm()},
+      {name: "New", action: () => this.newSession()},
+      {name: "Open", action: () => this.openSession()},
       {name: "Save", action: () => this.saveSession()},
-      {name: "Save As", action: () => this.saveSessionAsForm()},
-      {name: "Export", action: () => this.exportSessionForm()},
-      {name: "Import", action: () => this.importSessionForm()},
+      {name: "Save As", action: () => this.saveSessionAs()},
+      {name: "Delete", action: () => this.deleteSession()},
+      {name: "Export", action: () => this.exportSession()},
+      {name: "Import", action: () => this.importSession()},
     ]
     return jst.$div(
       {
@@ -1058,62 +1087,158 @@ class UIMenu extends jst.Component {
     );
   }
 
-  newSessionForm() {
+  async newSession() {
+    if (!await this.doUnsavedChangesCheck()) {
+      // User cancelled
+      return;
+    }
+
     const form = {
-      save: (data) => this.newSession(data),
       obj:  this.ui.createFakeObj({sessionName: "",}),
       fields: [{name: "sessionName", type: "text", label: "Session Name"}]
     }
 
-    this.ui.showModal({
+    const data = await this.ui.showModalAsync({
       title: "New Session",
       form:  form,
     })
-  }
 
-  newSession(data) {
-    let sessionName = data.sessionName;
-  }
-
-
-  openSessionForm() {
-    this.notYetImplementedForm("Open Session");
-  }
-
-  saveSession() {
-    const name = this.app.sessions.getCurrentSessionName();
-    if (!name || name == "Unnamed") {
-      this.saveSessionAsForm();
-    } 
-    else {
-      this.save()
+    if (data) {
+      this.app.createSession(data.sessionName);
     }
   }
 
-  saveSessionAsForm() {
+  async doUnsavedChangesCheck(opts = {}) {
+    if (!this.ui.pendingSave) {
+      return true;
+    }
+    
+    // Create a Yes/No to ask if the user wants to save
+    const result = await this.ui.yesNoCancelModalAsync({
+      message: "You have unsaved changes. Do you want to save them first?",
+    });
+    
+    if (result == "cancel") {
+      return false;
+    }
+    else if (result == "yes") {
+      return await this.saveSession();
+    }
+    else {
+      return true;
+    }
+  }
+
+  async openSession() {
+    if (!await this.doUnsavedChangesCheck()) {
+      // User cancelled
+      return;
+    }
+    // This will create a list selection form with all the sessions
     const form = {
-      save:   (data) => this.saveSessionAs(data),
+      obj:    this.ui.createFakeObj({sessionName: "",}),
+      fields: [{name: "sessionName", type: "selectionList", label: "Select Session To Load", labelSize: "100%", options: this.app.sessions.getSessionNames()}]
+    }
+
+    const data = await this.ui.showModalAsync({
+      title: "Open Session",
+      form:  form,
+    })
+
+    if (data) {
+      this.app.loadSession(data.sessionName);
+      this.ui.save();
+    }
+
+  }
+
+  // Will return true if the session was saved, false if the user cancelled
+  async saveSession(opts) {
+    const name = this.app.sessions.getCurrentSessionName();
+    if (!name || name == "Unnamed") {
+      return this.saveSessionAs();
+    } 
+    else {
+      this.ui.save()
+    }
+    return true;
+  }
+
+  async saveSessionAs(opts) {
+    const form = {
       obj:    this.ui.createFakeObj({sessionName: "",}),
       fields: [{name: "sessionName", type: "text", label: "Session Name"}]
     }
 
-    this.ui.showModal({
+    const data = await this.ui.showModalAsync({
       title: "Save Session As",
       form:  form,
     })
+
+    if (data) {
+      this.ui.save(data.sessionName);
+    }
+    this.refresh();
   }
 
-  exportSessionForm() {
-    this.ui.yesNoModal({
-      message: "Export Session?",
-      yes: () => this.notYetImplementedForm(),
-      no: () => {},
+  async deleteSession() {
+    // Check that the user really wants to delete the session
+    const result = await this.ui.yesNoCancelModalAsync({
+        message: "Are you sure you want to delete this session?",
     });
-    //this.notYetImplementedForm("Export Session");
+    if (result != "yes") {
+      return;
+    } 
+
+    this.app.deleteCurrentSession();
   }
 
-  importSessionForm() {
-    this.notYetImplementedForm("Import Session");
+  async exportSession() {
+    // Present a from asking if the user wants to export the current session or all sessions
+    const form = {
+      obj:    this.ui.createFakeObj({exportType: "current",}),
+      fields: [{name: "exportType", type: "select", label: "Export Type", labelSize: "100%", options: [{label: "Current Session", value: "current"}, {label: "All Sessions", value: "all"}]}]
+    }
+
+    const data = await this.ui.showModalAsync({
+      title: "Export Sessions",
+      form:  form,
+    })
+
+    if (data) {
+      if (data.exportType == "current") {
+        // Convert the current session name into a file name
+        const name = this.app.sessions.getCurrentSessionName();
+        const fileName = (name.replace(/ /g, "_") + ".pspc").toLowerCase();
+        utils.saveFile(fileName, this.app.getCurrentSessionConfig());
+      }
+      else {
+        utils.saveFile("pub-sub-playground.pspc", this.app.getConfig());
+      }
+    }
+  }
+
+  async importSession() {
+    const form = {
+      obj:    this.ui.createFakeObj({file: "",}),
+      fields: [{name: "file", type: "file", label: "Import File", labelSize: "130%", accept: ".pspc"}]
+    }
+
+    const data = await this.ui.showModalAsync({
+      title: "Import Sessions From File",
+      form:  form,
+    })
+
+    if (data) {
+      const json = await utils.loadFileAsync(data.file);
+
+      // Parse the json
+      const config = JSON.parse(json);
+
+      this.app.importConfig(config);
+    }
+    this.refresh();
+
   }
 
   notYetImplementedForm(title) {

@@ -154,6 +154,8 @@ export class World {
 
   addObject(type, opts = {}, guid, ephemeral) {
 
+    const internalOpts = Object.assign({}, opts);
+
     if (!guid) {
       guid = utils.guid();
     }
@@ -165,10 +167,10 @@ export class World {
       return;
     }
     
-    opts.scene = this.scene;
-    opts.useShadows = this.useShadows;
+    internalOpts.scene = this.scene;
+    internalOpts.useShadows = this.useShadows;
 
-    let obj = new cls(this.app, opts);
+    let obj = new cls(this.app, internalOpts);
     obj.guid = guid;
 
     // Put it on our list of objects
@@ -180,6 +182,23 @@ export class World {
     }
 
     return obj;
+  }
+
+  // Remove all objects from the world and then add a board
+  clear() {
+    this.objects.forEach((obj) => {
+      obj.object.destroy();
+    });
+    this.ephemeralObjects.forEach((obj) => {
+      obj.object.destroy();
+    });
+    this.objects = [];
+    this.ephemeralObjects = [];
+  }
+
+  initSession() {
+    this.clear();
+    this.addObject("board", {x1: -500, y1: -300, x2: 500, y2: 300});
   }
 
   cloneObject(obj, ephemeral) {
