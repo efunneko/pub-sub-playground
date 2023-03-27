@@ -46,8 +46,6 @@ export class App extends jst.Component {
 
     this.world              = new World(this, {ui: this.ui})
 
-    this.pendingSave        = false
-
     // Experimental locking of orientation
     if (this.platform.isMobile &&  screen.orientation && screen.orientation.lock) {
       screen.orientation.lock("landscape");
@@ -61,6 +59,12 @@ export class App extends jst.Component {
     
     // Listen for window resize events
     window.onresize = e => this.resize();
+    window.onbeforeunload = e => {
+      if (this.ui.getPendingSave()) {
+        return "You have unsaved changes. Are you sure you want to leave?";
+      }
+      return null;
+    };
 
   }
  

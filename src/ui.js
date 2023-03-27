@@ -311,6 +311,10 @@ export class UI extends jst.Component {
     this.refresh();
   }
 
+  getPendingSave() {
+    return this.pendingSave;
+  }
+
   deleteClicked(e) {
     this.uis.deleteSelectedMeshes();
   }
