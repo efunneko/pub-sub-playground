@@ -298,13 +298,15 @@ export class App extends jst.Component {
     return this.globalParams.getParams();
   }
 
-  setPendingSave(val) {
+  setPendingSave(val, skipUndo) {
     if (val && this.autoSave) {
       this.saveConfig();
     } else {
       this.ui.setPendingSave(val);
     }
-    this.saveUndo();
+    if (!skipUndo) {
+      this.saveUndo();
+    }
   }
 
   changeSessionName(name) {
@@ -333,6 +335,7 @@ export class App extends jst.Component {
     if (config) {
       // Tell the world to do the undo
       this.world.undo(config);
+      this.setPendingSave(true, true);
     }
   }
 
