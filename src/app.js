@@ -10,9 +10,8 @@ import * as LZString           from "lz-string";
 const DEBUG_MODE = true;
 
 const GLOBAL_PARAMS = [
-  {name: "name",           type: "text",        label: "Name", default: "New board", title: "Name of the board"},
   {name: "quality",        type: "select",      label: "Graphics Quality", default: "medium", options: [{label: "Low", value: "low"}, {label: "Medium", value: "medium"}, {label: "High", value: "high"}]},
-  {name: "volume",         type: "numberRange", label: "Volume", default: 5, min: 1, max: 10, step: 1},
+  //{name: "volume",         type: "numberRange", label: "Volume", default: 5, min: 1, max: 10, step: 1},
   {name: "dynamicGravity", type: "boolean",     label: "Dynamic Gravity", title: "On mobile devices, use the device's orientation as the direction of gravity", default: true},      
   {name: "maxCopies",      type: "numberRange", label: "Max Copies", default: 10, min: 1, max: 50, step: 1, title: "The maximum number of copies of each object that can be created"},
   {name: "cameraX",        type: "hidden",      default: 0},

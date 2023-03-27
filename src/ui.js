@@ -86,6 +86,9 @@ export class UI extends jst.Component {
       },
       uiSessionName$c: {
         cursor:          "pointer",
+        backgroundColor: jst.rgba(0, 0, 0, 0.6),
+        borderRadius$px: [0, 5, 0, 0],
+        padding$px:      [4, 4, 2, 2],
       },
       uiButton$c: {
         display:         "inline-block",
