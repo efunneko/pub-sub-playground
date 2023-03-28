@@ -36,6 +36,7 @@
 // used for things like rotating an object by clicking on a screwhead
 
 import * as THREE from 'three'
+import {Group}    from './objects/group.js'
 
 const defaultSelectAllowedRange = 15
 const selectionBoxDepth         = 120
@@ -142,6 +143,8 @@ export class UISelection {
     const mesh    = this.getMeshOrObjectGroup(intersect.mesh);
     const uisInfo = mesh && mesh.userData && mesh.userData.uisInfo;
 
+    this.originalClickedMesh = intersect.mesh;
+
     // If the mesh is in the list of selected meshes, then don't unselect anything    
     const isAlreadySelected = this.state.selectedMeshes.find(m => {
       const obj1 = this.getObjectFromMesh(m);
@@ -223,7 +226,7 @@ export class UISelection {
 
         // If the mesh is selectable remember that we have a persistent selection
         if (uisInfo && uisInfo.selectable) {
-          this.selectMesh(mesh);
+          this.selectMesh(mesh, selectedMeshes.length == 1);
         }
 
         // Call the onUp callback if present
@@ -365,7 +368,8 @@ export class UISelection {
 
 
   // Select a specific mesh
-  selectMesh(mesh) {
+  // singleSelection - if true, then only a single mesh has been selected
+  selectMesh(mesh, singleSelection) {
 
     if (mesh && mesh.userData && mesh.userData.uisInfo) {
       let uisInfo = mesh.userData.uisInfo;
@@ -375,6 +379,17 @@ export class UISelection {
       if (objectGroup) {
         mesh    = objectGroup.getMesh();
         uisInfo = mesh.userData.uisInfo;
+      }
+
+      // If this is a single selection and the mesh is a group, then check
+      // if the group is already selected. 
+      if (singleSelection && uisInfo.object instanceof Group && this.originalClickedMesh) {        
+        // Is the group already selected?
+        if (uisInfo.selected) {
+          this.unselectMeshes();
+          mesh = this.originalClickedMesh;
+          uisInfo = mesh.userData.uisInfo;
+        }
       }
 
       // Check if the mesh is already selected
@@ -399,7 +414,7 @@ export class UISelection {
       // If the mesh has a selected material, then use it
       if (uisInfo.selectedMaterial) {
         uisInfo.unselectedMaterial = mesh.material;
-        mesh.material               = uisInfo.selectedMaterial;
+        mesh.material              = uisInfo.selectedMaterial;
       }
 
       // If there is a config form and there is only one selected mesh, then show the form
