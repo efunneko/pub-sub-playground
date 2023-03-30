@@ -14,18 +14,19 @@ const stopPropEvents = {
 class Input extends jst.Component {
   constructor(app, obj, opts, formInfo) {
     super();
-    this.app        = app;
-    this.formInfo   = formInfo;
-    this.opts       = opts;
-    this.type       = opts.type;
-    this.label      = opts.label;
-    this.name       = opts.name;
-    this.title      = opts.title;
-    this.showIf     = opts.showIf;
-    this.value      = obj.getValue ? obj.getValue(opts.name) : null;
-    this.onChange   = opts.onChange;
-    this.onBlur     = opts.onBlur;
-    this.dependents = [];
+    this.app         = app;
+    this.formInfo    = formInfo;
+    this.opts        = opts;
+    this.type        = opts.type;
+    this.label       = opts.label;
+    this.name        = opts.name;
+    this.title       = opts.title;
+    this.showIf      = opts.showIf;
+    this.labelInline = opts.labelInline;
+    this.value       = obj.getValue ? obj.getValue(opts.name) : null;
+    this.onChange    = opts.onChange;
+    this.onBlur      = opts.onBlur;
+    this.dependents  = [];
 
     if (opts.dependsOn) {
       this.dependsOn = opts.dependsOn;
@@ -79,7 +80,9 @@ class Input extends jst.Component {
   cssInstance() {
     return {
       uiInputLabelDiv$c: {
+        display:         this.labelInline ? "inline-block" : "block",
         marginTop$px:    this.type == "subObject" ? 15: 0,
+        verticalAlign:   "top",
       },        
       uiInputLabel$c: {
         fontSize:        this.labelSize || this.type == "subObject" ? "90%": "65%",
@@ -273,6 +276,40 @@ class Select extends Input {
   getValue() {
     return this.inputRef && this.inputRef.el ? this.inputRef.el.value : this.value;
   }
+}
+
+// A checkbox
+class Checkbox extends Input {
+  constructor(app, obj, opts, formInfo) {
+    opts.labelInline = true;
+    super(app, obj, opts, formInfo);
+  }
+
+  cssLocal() {
+    return {
+      uiCheckbox$c: {
+        display:         "inline-block",
+        margin$px:       [1,0,5,10],
+      },
+      uiInputCheckbox$c: {
+        margin$px:       [0,5,0,0],
+      },
+    };
+  }
+
+  render() {
+    return super.renderInput(jst.$div(
+      {class: "-uiCheckbox"},
+      jst.$input(
+        {type: "checkbox", cn: "-uiInputCheckbox", title: this.title, checked: this.value, ref: "inputRef", events: { change: (e) => this._onChange(this.name, e.target.checked)}}
+      )
+    ));
+  }
+
+  getValue() {
+    return this.inputRef && this.inputRef.el ? this.inputRef.el.checked : this.value;
+  }
+
 }
   
 class Boolean extends Input {
@@ -875,6 +912,7 @@ export class UIInputTypes {
       case "select": return Select;
       case "password": return Password;
       case "boolean": return Boolean;
+      case "checkbox": return Checkbox;
       case "color": return Color;
       case "list": return List;
       case "buttonArray": return ButtonArray;
@@ -893,6 +931,7 @@ export class UIInputTypes {
   static Select         = Select;
   static Password       = Password;
   static Boolean        = Boolean;
+  static Checkbox       = Checkbox;
   static Color          = Color;
   static List           = List;
   static ButtonArray    = ButtonArray;

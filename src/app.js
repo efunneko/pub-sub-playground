@@ -5,6 +5,7 @@ import {World}                 from "./world.js"
 import {Platform}              from "./platform.js"
 import {Sessions}              from "./sessions.js"
 import {ObjectParams}          from "./objects/object-params.js"
+import {utils}                 from "./utils.js"
 import * as LZString           from "lz-string";
 
 const DEBUG_MODE = true;
@@ -15,6 +16,7 @@ const GLOBAL_PARAMS = [
   {name: "autoSave",       type: "boolean",     label: "Auto Save", title: "Immediately save any changes when they are made", default: false},      
   {name: "dynamicGravity", type: "boolean",     label: "Dynamic Gravity", title: "On mobile devices, use the device's orientation as the direction of gravity", default: true},      
   {name: "maxCopies",      type: "numberRange", label: "Max Copies", default: 10, min: 1, max: 50, step: 1, title: "The maximum number of copies of each object that can be created"},
+  {name: "removePasswords",type: "boolean",     label: "Remove Passwords from URL", title: "When saving the config to the URL, remove all passwords", default: false},
   {name: "cameraX",        type: "hidden",      default: 0},
   {name: "cameraY",        type: "hidden",      default: 0},
 ];
@@ -143,8 +145,11 @@ export class App extends jst.Component {
     return JSON.stringify(config);
   }
 
-  getCurrentSessionConfig() {
+  getCurrentSessionConfig(opts = {}) {
     const config = this.getConfigForURL();
+    if (opts.removePasswords) {
+      utils.setAllFields(config, "password", null);
+    }
     return JSON.stringify(config);
   }
 

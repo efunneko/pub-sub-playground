@@ -260,6 +260,58 @@ export let utils = {
     return seqNums[name];
   },
 
+  // Recursively descend into the object and set all fields to the specified value
+  setAllFields: (obj, name, value) => {
+    // Handle arrays
+    console.log('setAllFields: ', obj, name, value);
+    if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; i++) {
+        utils.setAllFields(obj[i], name, value);
+      }
+    } 
+    // Handle objects
+    else if (obj && typeof obj === 'object') {
+      Object.keys(obj).forEach((key) => {
+        if (typeof obj[key] === 'object') {
+          utils.setAllFields(obj[key], name, value);
+        } 
+        else if (key === name) {
+          obj[key] = value;
+        }
+      });
+    }
+  },
+
+  // Recursively descend into the object and check all fields of the specified name for the specified value
+  checkAllFields: (obj, name, value) => {
+    console.log("checkAllFields: ", obj, name, value)
+    // Handle arrays
+    if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; i++) {
+        if (utils.checkAllFields(obj[i], name, value)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    // Handle objects
+    else if (obj && typeof obj === 'object') {
+      let found = false;
+      Object.keys(obj).forEach((key) => {
+        if (typeof obj[key] === 'object' && obj[key] != null) {
+          if (utils.checkAllFields(obj[key], name, value)) {
+            found = true;
+          }
+        }
+        else if (key === name && obj[key] === value) {
+          found = true;
+        }
+      });
+      return found;
+    }
+    return false;
+  },    
+
   random: (start, end) => {
     return Math.random() * (end - start) + start;
   },

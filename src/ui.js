@@ -512,6 +512,28 @@ export class UI extends jst.Component {
       this.yesNoCancelModal(opts);
     });
   }
+
+  warningModal(opts) {
+    const form = {
+      ok: () => {this.closeModal()},
+      obj: this.createFakeObj({}),
+      fields: [
+        {name: "message", type: "textLine", value: opts.message, label: opts.message},
+      ]
+    }
+    this.showModal({
+      title: opts.title || "Warning",
+      form:  form,
+    })
+  }
+
+  warningModalAsync(opts) {
+    return new Promise((resolve, reject) => {
+      opts.ok = () => resolve();
+      this.warningModal(opts);
+    });
+  }
+
 }
 
 class UIModal extends jst.Component {
@@ -1201,10 +1223,18 @@ class UIMenu extends jst.Component {
   }
 
   async exportSession() {
+    if (!await this.doUnsavedChangesCheck()) {
+      // User cancelled
+      return;
+    }
+
     // Present a from asking if the user wants to export the current session or all sessions
     const form = {
-      obj:    this.ui.createFakeObj({exportType: "current",}),
-      fields: [{name: "exportType", type: "select", label: "Export Type", labelSize: "100%", options: [{label: "Current Session", value: "current"}, {label: "All Sessions", value: "all"}]}]
+      obj:    this.ui.createFakeObj({exportType: "current", removePasswords: true}),
+      fields: [
+        {name: "exportType", type: "select", label: "Export Type", labelSize: "100%", options: [{label: "Current Session", value: "current"}, {label: "All Sessions", value: "all"}]},
+        {name: "removePasswords", type: "checkbox", label: "Remove Passwords?", labelSize: "100%", title: "If checked, passwords will be removed from the exported file.", default: true}
+      ]
     }
 
     const data = await this.ui.showModalAsync({
@@ -1213,14 +1243,15 @@ class UIMenu extends jst.Component {
     })
 
     if (data) {
+      console.log("Exporting sessions", data);
       if (data.exportType == "current") {
         // Convert the current session name into a file name
         const name = this.app.sessions.getCurrentSessionName();
         const fileName = (name.replace(/ /g, "_") + ".pspc").toLowerCase();
-        utils.saveFile(fileName, this.app.getCurrentSessionConfig());
+        utils.saveFile(fileName, this.app.getCurrentSessionConfig({removePasswords: data.removePasswords}));
       }
       else {
-        utils.saveFile("pub-sub-playground.pspc", this.app.getConfig());
+        utils.saveFile("pub-sub-playground.pspc", this.app.getConfig({removePasswords: data.removePasswords}));
       }
     }
   }
@@ -1242,6 +1273,13 @@ class UIMenu extends jst.Component {
       // Parse the json
       const config = JSON.parse(json);
 
+      // Check to see if there are any null passwords in the config
+      if (utils.checkAllFields(config, "password", null)) {
+        // Just tell the user that there are null passwords and that they will need to reset them
+        if (!await this.ui.warningModalAsync({message: "The imported file contains null passwords. You will need to reset them."})) {
+          return;
+        }
+      }
       this.app.importConfig(config);
     }
     this.refresh();
