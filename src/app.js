@@ -256,6 +256,27 @@ export class App extends jst.Component {
 
   }
 
+  // Set starting config if there is no config in local storage
+  initConfig() {
+    return {
+      version: 2,
+      sessionConfig: {
+        sessions: [{
+          name: "Unnamed",
+          objects: []
+        }],
+        currentSessionName: "Unnamed",
+      },
+      globalSettings: {
+        quality: "medium",
+        autoSave: true,
+        dynamicGravity: true,
+        maxCopies: 10,
+        removePasswords: false,
+      },
+    };
+  }
+
   // Load the config from local storage
   loadConfig() {
 
@@ -276,6 +297,9 @@ export class App extends jst.Component {
 
     this.globalParams = new ObjectParams(this, GLOBAL_PARAMS, globalSettings);
 
+    if (!config || config==null) {
+      config = this.initConfig();
+    }
     this.config = config;
 
     this.sessions = new Sessions(this, sessionConfig);
