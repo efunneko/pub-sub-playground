@@ -113,7 +113,7 @@ export class UISelection {
 
     // Need to know if the shift or control keys are pressed
     const shiftKey = e.shiftKey;
-    const ctrlKey  = e.ctrlKey;
+    const ctrlKey  = this.ctrlKey(e)
 
     // Remember that the mouse is down so we can detect a drag onMove
     this.mouseDown = true;
@@ -173,6 +173,9 @@ export class UISelection {
 
       if (uisInfo.moveable) {
         this.state.isDragging     = true;
+
+        // Hide the config form for while we are dragging
+        this.ui.hideConfigForm();
       }
 
       // Call the onDown callback if present
@@ -190,6 +193,7 @@ export class UISelection {
   onUp(e) {
 
     this.state.cameraMoving = false;
+    this.ui.unhideConfigForm();
 
     if (!this.mouseDown) {
       return;
@@ -233,7 +237,7 @@ export class UISelection {
         if (uisInfo.onUp) {
           // TODO - this fails if we are in this loop because of a selection box
           const pos = this.getMousePosGivenZ(e, this.state.posAtMouseDown.z);
-          this.state.ctrlKey = e.ctrlKey;
+          this.state.ctrlKey = this.ctrlKey(e);
           uisInfo.onUp(mesh, pos, this.state);
         }
 
@@ -277,7 +281,7 @@ export class UISelection {
 
     // Find the delta position
     this.state.deltaPos = pos.clone().sub(this.state.prevPos);
-    this.state.ctrlKey  = e.ctrlKey;
+    this.state.ctrlKey  = this.ctrlKey(e);
     this.state.prevPos = pos;
 
     [this.state.activeMesh, ...this.state.selectedMeshes].forEach((mesh, i) => {
@@ -311,7 +315,7 @@ export class UISelection {
 
   onKeyDown(e) {
     // Handle CTRL-Z for undo
-    if (e.ctrlKey && e.key === "z") {
+    if (this.ctrlKey(e) && e.key === "z") {
       this.app.undo();
     }
     //if (e.key === "Delete" || e.key === "Backspace") {
@@ -771,6 +775,16 @@ export class UISelection {
       return objectGroup.getMesh();
     }
     return mesh;
+  }
+
+  // Return true if the control key is down on PCs or the command key is down on Macs
+  ctrlKey(e) {
+    if (this.app.platform.os === "Mac") {
+      return e.metaKey;
+    }
+    else {
+      return e.ctrlKey;
+    }
   }
 
 }

@@ -5,6 +5,7 @@ import {RGBELoader}         from 'three/examples/jsm/loaders/RGBELoader.js';
 import {Board}              from './objects/board.js'
 import {Ball}               from './objects/ball.js'
 import {Block}              from './objects/block.js'
+import {Counter}            from './objects/counter.js'
 import {Portal}             from './objects/portal.js'
 import {Barrier}            from './objects/barrier.js'
 import {Note}               from './objects/note.js'
@@ -24,6 +25,7 @@ const ObjectTypeToClass = {
   'board':   Board,
   'ball':    Ball,
   'block':   Block,
+  'counter': Counter,
   'portal':  Portal,
   'barrier': Barrier,
   'note':    Note,
@@ -60,6 +62,7 @@ export class World {
     }
 
     this.create()
+
   }
 
   // Create the World
@@ -336,9 +339,11 @@ export class World {
 
   // Set the configuration for all the objects
   setConfig(config) {
-
     let foundBoard = false;
     if (config) {
+      if (!config.objects) {
+        config.objects = [];
+      }
       config.objects.forEach(obj => {
         if (obj.type === "grouptest") {
           return;

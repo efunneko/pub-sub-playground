@@ -19,8 +19,19 @@ export class UI extends jst.Component {
     // State - can be: 'playing', 'paused'
     this.state         = 'playing';
 
-    this.modal         = null;
-    this.menu          = null;
+    this.modal            = null;
+    this.menu             = null;
+    this.configFormHidden = false;
+
+    // Add an event listener for the backspace key
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        if (!this.modal && !this.menu) {
+          this.uis.deleteSelectedMeshes()
+        }
+      }
+    })
+
   }
 
   cssGlobal() {
@@ -154,6 +165,12 @@ export class UI extends jst.Component {
           {cn: "-uiButton", title: "Settings", events: {click: e => this.settings()}},
           jst.$i({cn: "fas fa-cog"}),
         ),
+        jst.if(false && this.state != "playing") && jst.$div(
+          {cn: "-uiButton", title: "Brokers", events: {click: e => this.settings()}, style: 'position:relative'},
+          jst.$i({cn: "far fa-square", style: 'position: relative'},
+          jst.$i({cn: "fas fa-expand-arrows-alt", style: 'position: absolute; left: 0px; top: 0px'}),
+          ),
+        ),
         jst.if(this.state != "playing") && jst.$div(
           {cn: "-uiButton", title: "Add Object", events: {click: e => this.add()}},
           jst.$i({cn: "fas fa-plus"}),
@@ -181,6 +198,7 @@ export class UI extends jst.Component {
       jst.$div(
         {
           cn: "-uiRight",
+          style: this.configFormHidden ? "display: none" : "",
         },
         this.currConfigForm,
       ),
@@ -266,6 +284,7 @@ export class UI extends jst.Component {
           {label: "Ball", value: "ball", onClick: () => this.completeAdd({addType: "ball"})},  
           {label: "Block", value: "block", onClick: () => this.completeAdd({addType: "block"})},
           {label: "Barrier", value: "barrier", onClick: () => this.completeAdd({addType: "barrier"})},
+          {label: "Counter", value: "counter", onClick: () => this.completeAdd({addType: "counter"})},
           {label: "Portal", value: "portal", onClick: () => this.completeAdd({addType: "portal"})},
           {label: "Broker", value: "broker", onClick: () => this.completeAdd({addType: "broker"})},
           {label: "Emitter", value: "emitter", onClick: () => this.completeAdd({addType: "emitter"})},
@@ -345,7 +364,8 @@ export class UI extends jst.Component {
   }
 
   showConfigForm(formInfo) {
-    this.currConfigForm = this.generateConfigForm(formInfo);
+    this.currConfigForm        = this.generateConfigForm(formInfo);
+    this.configFormHidden = false;
     this.refresh();
     //this.refresh();
   }
@@ -360,6 +380,12 @@ export class UI extends jst.Component {
       {
         cn: "-uiForm " + (formInfo.inverseColors ? "-uiFormColorsInverse" : "-uiFormColors"),
         events: {
+          keydown: e => {
+            if (e.key == "Backspace" || e.key == "Delete") {
+              // Stop propagation so we don't delete objects when we're typing in a form
+              e.stopPropagation();
+            }
+          }
         }
       },
       formInfo.fields.map(field => {
@@ -394,8 +420,20 @@ export class UI extends jst.Component {
     return div;
   }
 
+  // Hiding the config form is done while dragging
+  hideConfigForm() {
+    this.configFormHidden  = true;
+    this.refresh();
+  }
+
+  unhideConfigForm() {
+    this.configFormHidden  = false;
+    this.refresh();
+  }
+
   clearConfigForm(doUnselect = false) {
-    this.currConfigForm = undefined;
+    this.currConfigForm        = undefined;
+    this.configFormHidden  = false;
     if (doUnselect) {
       this.uis.unselectMesh();
     }
@@ -534,6 +572,10 @@ export class UI extends jst.Component {
     });
   }
 
+  saveableConfigChanged() {
+    this.app.setPendingSave(true)
+  }
+
 }
 
 class UIModal extends jst.Component {
@@ -605,6 +647,12 @@ class UIModal extends jst.Component {
         {
           cn: "-uiModal",
           events: {
+            keydown: e => {
+              if (e.key == "Backspace" || e.key == "Delete") {
+                // Stop propagation of backspace key so it doesn't delete objects
+                e.stopPropagation();
+              }
+            }
           },
         },
         jst.$div(

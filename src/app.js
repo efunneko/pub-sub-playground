@@ -268,11 +268,17 @@ export class App extends jst.Component {
     if (config && config.globalSettings) {
       globalSettings = config.globalSettings;
     }
+
+    let sessionConfig;
+    if (config && config.sessionConfig) {
+      sessionConfig = config.sessionConfig;
+    }
+
     this.globalParams = new ObjectParams(this, GLOBAL_PARAMS, globalSettings);
 
     this.config = config;
 
-    this.sessions = new Sessions(this, config.sessionConfig);
+    this.sessions = new Sessions(this, sessionConfig);
 
   }
 
