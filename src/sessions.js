@@ -31,7 +31,7 @@ export class Sessions {
   }
 
   setFullConfig(sessionConfig) {
-    if (sessionConfig) {
+    if (sessionConfig && sessionConfig.sessions && sessionConfig.sessions.length > 0) {
       this.sessions       = sessionConfig.sessions;
       let name            = sessionConfig.currentSessionName;
       this.currentSession = this.sessions.find(s => s.name === name);
@@ -41,8 +41,8 @@ export class Sessions {
       }
     }
     else {      
-      this.sessions       = [];
       this.currentSession = {name: "Unnamed", version: 2};
+      this.sessions       = [this.currentSession];
     }
   }
 
