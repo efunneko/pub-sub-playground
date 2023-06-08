@@ -45,5 +45,5 @@ Then look at the console output for the URL to connect to - probably http://loca
 1. Add mobile stuff: dynamic gravity, orientation adjustment
 2. Better interface for broker configuration
 3. Pop-up on load to allow for broker adjustments so that you don't accidentally use someone else's broker
-4. 
+4. Fix subscription management
 
