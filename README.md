@@ -42,5 +42,8 @@ Then look at the console output for the URL to connect to - probably http://loca
 1. Fix the object Add menu to look much better
 1. Add a 'function' object that can do things when hit by a ball. For example, delete the ball that hit it and create a new one of a different color and topic - this simulates a micro-service issuing a reply
 1. Add the abiltity to zoom the view with CTRL-scrollwheel
-1. Add mobile dynamic gravity
+1. Add mobile stuff: dynamic gravity, orientation adjustment
+2. Better interface for broker configuration
+3. Pop-up on load to allow for broker adjustments so that you don't accidentally use someone else's broker
+4. 
 
