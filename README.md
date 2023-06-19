@@ -2,6 +2,10 @@
 
 A browser tool that lets you experiment with Publish Subscribe messaging in a 2d-physics/3d-rendered environment. It currently supports Solace (SMF) messaging (MQTT coming soon)
 
+## NOTE
+
+Note that I have been alerted to a bug where when you change the name of the broker, all the portals that are already connected to that broker are confused. You need to click on each of those portals and simply hit Ok on their configuration. I will try to fix this asap, but in the meantime use this as a workaround.
+
 ## Get Started from Source
 ```
 git clone https://github.com/efunneko/pub-sub-playground.git
