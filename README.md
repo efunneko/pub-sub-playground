@@ -2,6 +2,10 @@
 
 A browser tool that lets you experiment with Publish Subscribe messaging in a 2d-physics/3d-rendered environment. It currently supports Solace (SMF) messaging (MQTT coming soon)
 
+## NOTE
+
+Note that I have been alerted to a bug where when you change the name of the broker, all the portals that are already connected to that broker are confused. You need to click on each of those portals and simply hit Ok on their configuration. I will try to fix this asap, but in the meantime use this as a workaround.
+
 ## Get Started from Source
 ```
 git clone https://github.com/efunneko/pub-sub-playground.git
@@ -42,5 +46,8 @@ Then look at the console output for the URL to connect to - probably http://loca
 1. Fix the object Add menu to look much better
 1. Add a 'function' object that can do things when hit by a ball. For example, delete the ball that hit it and create a new one of a different color and topic - this simulates a micro-service issuing a reply
 1. Add the abiltity to zoom the view with CTRL-scrollwheel
-1. Add mobile dynamic gravity
+1. Add mobile stuff: dynamic gravity, orientation adjustment
+2. Better interface for broker configuration
+3. Pop-up on load to allow for broker adjustments so that you don't accidentally use someone else's broker
+4. Fix subscription management
 
