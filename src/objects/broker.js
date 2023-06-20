@@ -62,8 +62,9 @@ export class Broker extends StaticObject {
   createBroker() {
 
     // Name plate
+    console.log("Creating broker", this.name);
     const {texture, height, width} = utils.textToTexture({
-      text: `Broker: ${this.name}`, 
+      text: this.name || "Broker", 
       height: this.height,
       fontSize: 12,
       padding: 3,
@@ -72,10 +73,6 @@ export class Broker extends StaticObject {
       backgroundColor: 'black',
     });
 
-    const geometry = new THREE.BoxGeometry(width, this.height, 2);
-    const material = new THREE.MeshStandardMaterial({map: texture});
-    const plate = new THREE.Mesh(geometry, material);
-    this.group.add(plate);
 
     // The base
     const base = new THREE.Mesh(
@@ -90,10 +87,16 @@ export class Broker extends StaticObject {
         envMapIntensity:   0.25,
         })
     );
-    base.position.set(0, 0, -5.2);
+    base.position.set(0, 0, -6.2);
     base.castShadow    = this.useShadows;
     base.receiveShadow = this.useShadows;
     this.group.add(base);
+
+    const geometry = new THREE.BoxGeometry(width, this.height, 2);
+    const material = new THREE.MeshStandardMaterial({map: texture});
+    const plate = new THREE.Mesh(geometry, material);
+    plate.position.set(0, 0, 1);
+    this.group.add(plate);
 
   }
 

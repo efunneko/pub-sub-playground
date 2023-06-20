@@ -157,25 +157,28 @@ export class UI extends jst.Component {
         jst.$div({cn: "-uiButton", events: {click: e => this.togglePause()}},
           jst.if(this.state == "playing") && jst.$i({cn: "fas fa-pause"}) || jst.$i({cn: "fas fa-play"}),
         ),
+        // Menu
         jst.if(this.state != "playing") && jst.$div(
           {cn: `-uiButton ${this.menu ? '-uiButtonFlat' : ''}`, title: "Menu", events: {click: e => this.toggleMenu()}},
           jst.$i({cn: "fas fa-bars"}),
         ),
-        jst.if(this.state != "playing") && jst.$div(
+        // Settings
+        jst.if(false && this.state != "playing") && jst.$div(
           {cn: "-uiButton", title: "Settings", events: {click: e => this.settings()}},
           jst.$i({cn: "fas fa-cog"}),
         ),
-        jst.if(false && this.state != "playing") && jst.$div(
-          {cn: "-uiButton", title: "Brokers", events: {click: e => this.settings()}, style: 'position:relative'},
-          jst.$i({cn: "far fa-square", style: 'position: relative'},
-          jst.$i({cn: "fas fa-expand-arrows-alt", style: 'position: absolute; left: 0px; top: 0px'}),
-          ),
+        // Fullscreen
+        jst.if(this.state != "playing") && jst.$div(
+          {cn: "-uiButton", title: "Fullscreen", events: {click: e => this.app.toggleFullscreen()}},
+          jst.$i({cn: "fas fa-expand-arrows-alt"}),
         ),
+        // Add object
         jst.if(this.state != "playing") && jst.$div(
           {cn: "-uiButton", title: "Add Object", events: {click: e => this.add()}},
           jst.$i({cn: "fas fa-plus"}),
         ),
-        jst.if(this.state != "playing") && jst.$div(
+        // Reset
+        jst.if(false && this.state != "playing") && jst.$div(
           {cn: "-uiButton", title: "Reset", events: {click: e => this.reset()}},
           jst.$i({cn: "fas fa-undo"}),
         ),
@@ -253,6 +256,15 @@ export class UI extends jst.Component {
       this.app.play();
     }
     this.refresh();
+  }
+
+  toggleFullscreen() {
+    // If we are already in fullscreen mode, exit it
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      document.body.requestFullscreen();
+    }
   }
 
   play() {
@@ -1137,6 +1149,7 @@ class UIMenu extends jst.Component {
       {name: "Delete", action: () => this.deleteSession()},
       {name: "Export", action: () => this.exportSession()},
       {name: "Import", action: () => this.importSession()},
+      {name: "Preferences", action: () => this.ui.settings()}
     ]
     return jst.$div(
       {

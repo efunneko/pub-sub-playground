@@ -19,6 +19,7 @@ const GLOBAL_PARAMS = [
   {name: "removePasswords",type: "boolean",     label: "Remove Passwords from URL", title: "When saving the config to the URL, remove all passwords", default: false},
   {name: "cameraX",        type: "hidden",      default: 0},
   {name: "cameraY",        type: "hidden",      default: 0},
+  {name: "cameraZ",        type: "hidden",      default: 2300},
 ];
 
 export class App extends jst.Component {
@@ -556,6 +557,14 @@ export class App extends jst.Component {
 
   moveCamera(deltaX, deltaY) {
     this.world.moveCamera(deltaX, deltaY);
+  }
+
+  zoomCamera(delta) {
+    this.world.zoomCamera(delta);
+  }
+
+  toggleFullscreen() {
+    this.ui.toggleFullscreen();
   }
 
 }

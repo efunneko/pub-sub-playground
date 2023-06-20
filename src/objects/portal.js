@@ -34,12 +34,12 @@ export class Portal extends StaticObject {
       {name: "enabled", type: "boolean", label: "Enabled", default: true, eventLabels: ["enabled"]},
       {name: "mode", type: "select", label: "Portal Mode", default: "broker", options: [{value: "broker", label: "Connect to Broker"}, {value: "void", label: "Send to Void"}]},
       {name: "broker", type: "hidden"},
-      {name: "brokerId", type: "select", label: "Broker", dependsOn: ["mode"], showIf: isBrokerMode, options: () => this.app.getBrokers().map(b => { return {value: b.getId(), label: b.getName()}})},
-      {name: "color", type: "color", label: "Color", dependsOn: ["mode"], showIf: isBrokerMode, default: defaultColor},
+      {name: "brokerId", type: "select", label: "Broker", default: 0, dependsOn: ["mode"], showIf: isBrokerMode, options: () => [{value: 0, label: "-select-broker-"}].concat(this.app.getBrokers().map(b => { return {value: b.getId(), label: b.getName()}}))},
+      {name: "color", type: "color", label: "Color", dependsOn: ["mode"], showIf: isBrokerMode, default: defaultColor, eventLabels: ["appearance"]},
       {name: "bindToQueue", type: "boolean", label: "Bind to Queue", dependsOn: ["mode"], showIf: isBrokerMode, title: "If enabled, the portal will bind to a queue on the broker.", eventLabels: ["queueConfig"], default: false},
       {name: "queueName", type: "text", dependsOn: ["bindToQueue", "mode"], showIf: (obj, inputs) => inputs.bindToQueue.getValue() && isBrokerMode(obj, inputs), label: "Queue Name", eventLabels: ["queueConfig"], title: "If 'Bind to Queue' is true, this is the name of the queue to bind to. NOTE that binding to a named queue is only supported by Solace brokers.", default: ""},
-      {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", dependsOn: ["mode"], showIf: isBrokerMode, title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions", default: false},
-      {name: "subscriptionList", type: "list", entryName: "Subscription", dependsOn: ["useSubscriptionList", "mode"], showIf: (obj, inputs) => inputs.useSubscriptionList.getValue() && isBrokerMode(obj, inputs), label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker.", default: []},
+      {name: "useSubscriptionList", type: "boolean", label: "Use Subscription List", dependsOn: ["mode"], showIf: isBrokerMode, title: "If enabled, the subscriptions below will be added in addition to the normal portal subscriptions", default: false, eventLabels: ["subscriptionList"]},
+      {name: "subscriptionList", type: "list", entryName: "Subscription", dependsOn: ["useSubscriptionList", "mode"], showIf: (obj, inputs) => inputs.useSubscriptionList.getValue() && isBrokerMode(obj, inputs), label: "Subscription List", title: "If 'Use SubScription List' is true, each subscription in this list will be subscribed to on the broker.", default: [], eventLabels: ["subscriptionList"]},
       {name: "lastConnectError", type: "textarea", width: 40, label: "Last Connect Error", dependsOn: ["mode"], showIf: isBrokerMode, readonly: true, default: ""},
       {name: "x", type: "hidden"},
       {name: "y", type: "hidden"},
@@ -152,7 +152,6 @@ export class Portal extends StaticObject {
   manageConnection() {
     this.setConnectEffects();
     if (this.mode == "broker" && this.enabled && !this.brokerConnection) {
-      console.log("Connecting to broker");
       this.connect();
     }
     else if ((this.mode != "broker" || !this.enabled) && this.brokerConnection) {
@@ -163,7 +162,12 @@ export class Portal extends StaticObject {
 
   // Connect to the configured Broker
   connect() {
-    if (this.brokerConnection || (!this.broker && !this.brokerId)) {
+    if (this.brokerConnection) {
+      return;
+    }
+    if (!this.broker && !this.brokerId) {
+      console.log("No broker configured");
+      this.lastConnectError = "No broker configured";
       return;
     }
 
@@ -175,8 +179,12 @@ export class Portal extends StaticObject {
       broker = this.app.getBrokerById(this.brokerId);
     }
     if (!broker) {
+      console.log("Configured broker not found");
+      this.lastConnectError = "Configured broker not found";
       return;
     }
+
+    console.log("Connecting to broker", this.broker, this.brokerId)
 
     this.brokerConnection = broker.createConnection({
       onConnect: connection => this.onConnect(connection),
@@ -357,6 +365,14 @@ export class Portal extends StaticObject {
     this.disconnect();
     this.connect();
   }
+
+  onAppearanceChange() {
+    this.redraw();
+  }
+
+  onSubscriptionListChange() {
+    this.subscribeToPortalTopics();
+  }    
 
   // Check for any current contacts with the portal and 
   // call onCollision() for each one

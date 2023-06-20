@@ -34,6 +34,8 @@ const ObjectTypeToClass = {
   'group':   Group,
 };
 
+const MaxCameraZ = 4000;
+
 export class World {
   constructor(app, opts) {
     this.app              = app
@@ -82,10 +84,10 @@ export class World {
     // Create the scene, camera, renderer and lighting
     this.scene             = new THREE.Scene()
 
-    this.camera            = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 0.1, 3500 )
+    this.camera            = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 0.1, MaxCameraZ )
     this.camera.position.x = this.app.cameraX;
     this.camera.position.y = this.app.cameraY;
-    this.camera.position.z = 2300
+    this.camera.position.z = this.app.cameraZ;
 
     this.renderer = new THREE.WebGLRenderer({antialias: this.app.quality == 'high'})
     //    this.renderer.setPixelRatio( window.devicePixelRatio * 0.8 )
@@ -95,10 +97,10 @@ export class World {
     document.body.appendChild(this.renderer.domElement)
 
     // Lighting
-    let dirLight = new THREE.DirectionalLight( 0xffffff, 0.8 );
-    dirLight.position.set(1000, 1000, 1500)
+    let dirLight = new THREE.DirectionalLight( 0xffffff, 0.4 );
+    dirLight.position.set(500, 500, 1500)
     this.scene.add( dirLight );
-    this.scene.add(new THREE.AmbientLight(0xffffff,0.40));
+    this.scene.add(new THREE.AmbientLight(0xffffff,0.60));
 
     // Optionally enable shadows
     if (this.useShadows) {
@@ -483,7 +485,22 @@ export class World {
     this.camera.position.y += deltaY;
     this.app.cameraX = this.camera.position.x;
     this.app.cameraY = this.camera.position.y;
+
+    this.app.setPendingSave(true);
   }
+
+  zoomCamera(delta) {
+    if (delta > 0) {
+      this.camera.position.z /= 1.1;
+    }
+    else {
+      this.camera.position.z = Math.min(this.camera.position.z * 1.1, MaxCameraZ);
+    }
+    this.app.cameraZ = this.camera.position.z;
+    this.app.setPendingSave(true);
+  }
+
+
   
 
 }

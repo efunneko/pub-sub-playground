@@ -68,6 +68,8 @@ export class Group extends StaticObject {
     if (this.objects.length == 0 && this.objectIds.length > 0) {
       this.objects = this.objectIds.map(id => this.app.getWorld().getObjectById(id));
     }
+    // Filter out any nulls
+    this.objects = this.objects.filter(obj => obj);
     return this.objects;
   }
 
@@ -81,6 +83,7 @@ export class Group extends StaticObject {
   }
 
   onHandler(type, obj, pos, info) {
+    console.log("Group.onHandler", type, this.getObjects());
     this.getObjects().forEach(obj => {
       let mesh = obj.getMesh();
       if (mesh.userData && mesh.userData.uisInfo) {

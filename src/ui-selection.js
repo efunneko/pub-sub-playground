@@ -103,6 +103,10 @@ export class UISelection {
     el.addEventListener("pointerdown", (e) => this.onDown(e));
     el.addEventListener("pointerup",   (e) => this.onUp(e));
     el.addEventListener("pointermove", (e) => this.onMove(e));
+    el.addEventListener("pointerleave", (e) => this.onUp(e));
+
+    // Handled the mouse scroll event
+    el.addEventListener("wheel", (e) => this.onWheel(e));
 
     // Also register for key events to know when Delete is pressed
     document.addEventListener("keydown", (e) => this.onKeyDown(e));
@@ -229,7 +233,8 @@ export class UISelection {
         const uisInfo = mesh.userData.uisInfo;
 
         // If the mesh is selectable remember that we have a persistent selection
-        if (uisInfo && uisInfo.selectable) {
+        if (uisInfo && uisInfo.selectable && 
+          (this.state.persistentSelectable || this.state.selectionBox || this.state.selectedMeshes.length)) {
           this.selectMesh(mesh, selectedMeshes.length == 1);
         }
 
@@ -245,7 +250,6 @@ export class UISelection {
 
     });
 
-    //this.state.selectedMesh = null;
     this.state.isDragging   = false;
     this.state.activeMesh   = null;
 
@@ -275,7 +279,7 @@ export class UISelection {
     const dist = Math.sqrt(dx*dx + dy*dy);
 
     // If the mouse has moved too far, then we it isn't eligible for a persistent selection
-    if (dist > this.selectAllowedRange) {
+    if (dist > this.selectAllowedRange && this.state.selectedMeshes.length == 0) {
       this.state.persistentSelectable = false;
     }
 
@@ -299,6 +303,18 @@ export class UISelection {
       }
     })
 
+  }
+
+  // Handle the mouse wheel event
+  onWheel(e) {
+    // If the control key is pressed, then we are moving the camera
+    if (this.ctrlKey(e)) {
+      this.app.zoomCamera(e.deltaY);
+      // stop propagation so that the page doesn't scroll
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    return false;
   }
 
   // Loop over the meshes and call the given handler on each one

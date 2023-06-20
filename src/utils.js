@@ -80,6 +80,7 @@ export let utils = {
     // Fill the background
     // If the color is specified as "color-color", then do half and half
     let colors = opts.backgroundColor.split('-');
+    console.log('backgroundColor: ', opts.backgroundColor);
     if (colors.length == 2) {
       // Fill half the background with the first color
       ctx.fillStyle = colors[0];
@@ -90,8 +91,20 @@ export let utils = {
       ctx.fillRect(width/2, 0, width/2, height);
     }
     else {
+      // For single color, we are going to draw stripes with the color
+      // and a slightly darker color. We will do this by first filling
+      // the entire background with the darker color, then drawing
+      // a semi-transparent black rectangle over the top.
+
       ctx.fillStyle = opts.backgroundColor;
       ctx.fillRect(0, 0, width, height);
+
+      // Draw a semi-transparent black rectangle over the top
+      ctx.fillStyle = 'rgba(0,0,0,0.07)';
+      //ctx.fillRect(0, 0, width/4, height);
+      ctx.fillRect(width/2-width/8, 0, width/8, height);
+      ctx.fillRect(width/2+width/8, 0, width/8, height);
+      //ctx.fillRect(width*5/8, 0, width/8, height);
     }
 
     ctx.fillStyle = opts.color;

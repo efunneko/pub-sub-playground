@@ -24,7 +24,8 @@ export class Ball extends DynamicObject {
       {name: "partitionKey", type: "text", label: "Partition Key"},
       // {name: "labelColor", type: "color", label: "Label Color"},
       {name: "forceTopic", type: "boolean", label: "Force Topic", title: "Use the configured topic when going through a portal", default: false},
-      {name: "topic", type: "text", width: 50, label: "Topic", title: "If Force Topic is true, this topic is used when going through a portal", default: ""},      
+      {name: "topic", type: "text", width: 50, label: "Topic", title: "If Force Topic is true, this topic is used when going through a portal", default: ""},
+      {name: "ttl", type: "text", label: "Time to Live", title: "Time to live (in seconds) - zero means live for ever", default: 0},
     ],
     // UI Selection options
     {
@@ -55,6 +56,21 @@ export class Ball extends DynamicObject {
 
     this.setInitialVelocity(opts)
 
+    let ttl;
+    try {
+      ttl = parseInt(this.ttl);
+    }
+    catch (e) {
+      ttl = 0;
+    }
+
+    if (ttl) {
+      // We have a time to live value in seconds, so set a timer to remove the ball
+      setTimeout(() => {
+        this.destroy()
+      }, ttl * 1000)
+    }
+
   }
 
   create() {
@@ -67,8 +83,9 @@ export class Ball extends DynamicObject {
     
     let texture;
 
-    if (this.label) {
-
+    // TBD - for now, always create a texture since it puts a subtle striping on the ball
+    if (true || this.label) {
+      this.label = this.label || "";
       let maxLineLength = 0;
       const lines = this.label.split(/\n|\\n/);
       lines.forEach(line => {
@@ -85,6 +102,7 @@ export class Ball extends DynamicObject {
     
       // Create the material
       let height, width;
+      console.log("texttoTexture", this.label, maxLineLength    )
       const textTexture = utils.textToTexture({
         text: this.label, 
         font: "Times New Roman, serif",
